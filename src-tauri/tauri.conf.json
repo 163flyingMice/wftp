@@ -1,10 +1,11 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/schema.json",
   "build": {
-    "beforeBuildCommand": "",
-    "beforeDevCommand": "",
-    "devPath": "Set automatically by Vue CLI plugin",
-    "distDir": "Set automatically by Vue CLI plugin"
+    "beforeBuildCommand": "npm run build",
+    "beforeDevCommand": "npm run serve",
+    "devPath": "http://localhost:8081",
+    "distDir": "../dist",
+    "withGlobalTauri": true
   },
   "package": {
     "productName": "wftp",
@@ -12,7 +13,15 @@
   },
   "tauri": {
     "allowlist": {
-      "all": true
+      "fs": {
+        "all": true,
+        "scope": [
+          "C:/*",
+          "D:/*",
+          "E:/*",
+          "F:/*"
+        ]
+      }
     },
     "bundle": {
       "active": true,

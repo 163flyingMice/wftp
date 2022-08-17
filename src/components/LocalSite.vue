@@ -9,6 +9,7 @@
             max-height: 100px !important;
             min-height: 100px !important;
           "
+          :default-expanded-keys="['0']"
           :show-line="true"
           :tree-data="treeData"
           @select="onSelect"
@@ -37,7 +38,10 @@
       >
         <template #bodyCell="{ column, text }">
           <template v-if="column.dataIndex === 'name'"
-            ><folder-open-outlined v-if="text.kind === 'folder'" />
+            ><folder-open-outlined
+              :style="{ color: '#ffe896' }"
+              v-if="text.kind === 'folder'"
+            />
             <file-outlined v-else />
             <a-input
               class="showInput"
@@ -59,6 +63,7 @@
 import store from "@/store/index";
 import { FileOutlined, FolderOpenOutlined } from "@ant-design/icons-vue";
 import { invoke } from "@tauri-apps/api";
+import { readDir } from "@tauri-apps/api/fs";
 import { MouseMenuDirective } from "@howdyjs/mouse-menu";
 export default {
   directives: {
@@ -162,24 +167,6 @@ export default {
           key: "update_at",
           width: 100,
         },
-        {
-          title: "权限",
-          dataIndex: "permissions",
-          key: "permissions",
-          width: 100,
-        },
-        {
-          title: "所有者",
-          dataIndex: "owner",
-          key: "owner",
-          width: 50,
-        },
-        {
-          title: "组",
-          dataIndex: "group",
-          key: "group",
-          width: 50,
-        },
       ],
     };
   },
@@ -193,11 +180,22 @@ export default {
   },
   methods: {
     getData() {
-      invoke("list", {
-        path: this.currentPath,
-      }).then((response) => {
-        store.state.stateList.push("状态：列出“" + this.currentPath + "”的目录成功");
-        this.dataSource = response;
+      readDir("C:/").then((response) => {
+        let folder_list = new Array();
+        response.forEach((elem) => {
+          let temp = {};
+          temp.name = {};
+          temp.name.name = elem.name;
+          temp.name.kind = "file";
+          temp.path = elem.path;
+          temp.is_directory = "文件";
+          if (elem.children != undefined) {
+            temp.name.kind = "folder";
+            temp.is_directory = "文件夹";
+          }
+          folder_list.push(temp);
+        });
+        this.dataSource = folder_list;
       });
     },
 
@@ -234,16 +232,21 @@ export default {
       invoke("rename_file", {
         fromName: this.fromName,
         toName: this.toName,
-      }).then((response) => {
-        console.log(response);
-      });
+      }).then(() => {});
     },
     getTreeData() {
-      invoke("folder_list", {
-        path: "/",
-      }).then((response) => {
-        console.log(response);
-        this.treeData = [response];
+      readDir("C:/").then((response) => {
+        let folder_list = {};
+        folder_list.title = "/";
+        folder_list.key = "0";
+        folder_list.children = new Array();
+        response.forEach((elem) => {
+          let temp = {};
+          temp.title = elem.name;
+          temp.key = "0-0";
+          folder_list.children.push(temp);
+        });
+        this.treeData = [folder_list];
       });
     },
   },

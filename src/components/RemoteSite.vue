@@ -9,6 +9,7 @@
             max-height: 100px !important;
             min-height: 100px !important;
           "
+          :default-expanded-keys="['0']"
           :show-line="true"
           :tree-data="treeData"
           @select="onSelect"
@@ -34,10 +35,14 @@
         :loading="loading"
         :pagination="false"
         :customRow="customRow"
+        :scroll="{ x: 800 }"
       >
         <template #bodyCell="{ column, text }">
           <template v-if="column.dataIndex === 'name'"
-            ><folder-open-outlined v-if="text.kind === 'folder'" />
+            ><folder-open-outlined
+              :style="{ color: '#ffe896' }"
+              v-if="text.kind === 'folder'"
+            />
             <file-outlined v-else />
             <a-input
               class="showInput"
@@ -45,7 +50,8 @@
               v-model:value="toName"
               :bordered="false"
               placeholder=""
-              @keydown.enter="rename"
+              @pressEnter.prevent="renameInput"
+              @focus.prevent="handleFocus"
               style="display: inline-block; width: 80px"
             />
             <text v-else>{{ text.name }}</text>
@@ -125,6 +131,7 @@ export default {
             fn: () => {
               for (const key in this.dataSource) {
                 if (this.dataSource[key].name.name == this.fromName) {
+                  store.state.stateList.push("命令：修改文件夹" + this.fromName);
                   this.dataSource[key].name.showInput = true;
                 }
               }
@@ -185,14 +192,14 @@ export default {
   },
 
   mounted() {
-    if (this.focusInput) {
-      document.querySelector(".showInput").focus();
-    }
     this.getData();
-    this.getTreeData();
   },
   methods: {
     getData() {
+      this.getTreeData();
+      document
+        .querySelectorAll("tr")
+        .forEach((elem) => elem.classList.remove("selected"));
       invoke("list", {
         path: this.currentPath,
       }).then((response) => {
@@ -222,26 +229,38 @@ export default {
           }
           this.getData();
         },
-        onContextmenu: () => {
+        onContextmenu: (event) => {
+          document
+            .querySelectorAll("tr")
+            .forEach((elem) => elem.classList.remove("selected"));
+          event.target.parentElement.className = "selected";
           for (const key in this.dataSource) {
             this.dataSource[key].name.showInput = false;
           }
-          this.fromName = record.name.name;
+          this.toName = this.fromName = record.name.name;
+        },
+        onclick: (event) => {
+          document
+            .querySelectorAll("tr")
+            .forEach((elem) => elem.classList.remove("selected"));
+          event.target.parentElement.className = "selected";
         },
       };
     },
-    rename() {
+    renameInput() {
       invoke("rename_file", {
         fromName: this.fromName,
         toName: this.toName,
       }).then((response) => {
-        console.log(response);
+        store.state.stateList.push("响应：" + response);
       });
+      this.getData();
+    },
+    handleFocus(event) {
+      console.log(event.target.select());
     },
     getTreeData() {
-      invoke("folder_list", {
-        path: "/",
-      }).then((response) => {
+      invoke("folder_list", {}).then((response) => {
         console.log(response);
         this.treeData = [response];
       });
@@ -264,7 +283,15 @@ export default {
   padding: 0px 5px !important;
   font-size: 10px !important;
 }
+
 .ant-table-container table > thead > tr:first-child th {
   font-weight: bolder;
+}
+
+.selected {
+  background-color: #1890ff;
+}
+.ant-table-cell-row-hover {
+  background-color: white !important;
 }
 </style>

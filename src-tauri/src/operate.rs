@@ -157,7 +157,7 @@ pub fn list(path: String) -> Vec<FileList> {
 }
 
 #[tauri::command]
-pub fn folder_list(path: String) -> FolderTree {
+pub fn folder_list() -> FolderTree {
     let mut list: Vec<String> = Vec::new();
     unsafe {
         list = OWNER_FTP_STREAM
