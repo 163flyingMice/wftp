@@ -32,7 +32,6 @@
         v-mouse-menu="options"
         :columns="columns"
         :data-source="dataSource"
-        :loading="loading"
         :pagination="false"
         :customRow="customRow"
       >
@@ -176,10 +175,10 @@ export default {
       document.querySelector(".showInput").focus();
     }
     this.getData();
-    this.getTreeData();
   },
   methods: {
     getData() {
+      this.getTreeData();
       readDir("C:/").then((response) => {
         let folder_list = new Array();
         response.forEach((elem) => {
@@ -235,19 +234,20 @@ export default {
       }).then(() => {});
     },
     getTreeData() {
-      readDir("C:/").then((response) => {
-        let folder_list = {};
-        folder_list.title = "/";
-        folder_list.key = "0";
-        folder_list.children = new Array();
-        response.forEach((elem) => {
+      //let dir = ["C:/", "D:/", "E:/", "F:/"];
+      let folder_list = {};
+      folder_list.children = [];
+      folder_list.key = "0";
+      folder_list.title = "/";
+      readDir("C:").then((response) => {
+        response.forEach((elem, index) => {
           let temp = {};
+          temp.key = folder_list.key + "-" + index;
           temp.title = elem.name;
-          temp.key = "0-0";
           folder_list.children.push(temp);
         });
-        this.treeData = [folder_list];
       });
+      this.treeData = [folder_list];
     },
   },
 

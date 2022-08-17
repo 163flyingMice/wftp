@@ -32,7 +32,6 @@
         v-mouse-menu="options"
         :columns="columns"
         :data-source="dataSource"
-        :loading="loading"
         :pagination="false"
         :customRow="customRow"
         :scroll="{ x: 800 }"
@@ -261,7 +260,6 @@ export default {
     },
     getTreeData() {
       invoke("folder_list", {}).then((response) => {
-        console.log(response);
         this.treeData = [response];
       });
     },
