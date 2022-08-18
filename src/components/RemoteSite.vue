@@ -1,4 +1,10 @@
 <template>
+  <a-modal v-model:visible="visible" :wrap-style="{ overflow: 'hidden' }" @ok="handleOk">
+    <a-input v-model:value="value" placeholder="Basic usage" ref="mkdir" />
+    <template #title>
+      <div style="width: 100%; cursor: move">{{ modalTitle }}</div>
+    </template>
+  </a-modal>
   <a-row>
     <a-col style="min-width: 100px !important; width: 100%">
       <div>
@@ -62,9 +68,15 @@
 </template>
 <script>
 import store from "@/store/index";
-import { FileOutlined, FolderOpenOutlined } from "@ant-design/icons-vue";
+import {
+  FileOutlined,
+  FolderOpenOutlined,
+  ExclamationCircleOutlined,
+} from "@ant-design/icons-vue";
 import { invoke } from "@tauri-apps/api";
 import { MouseMenuDirective } from "@howdyjs/mouse-menu";
+import { createVNode } from "vue";
+import { Modal } from "ant-design-vue";
 export default {
   directives: {
     MouseMenu: MouseMenuDirective,
@@ -75,9 +87,12 @@ export default {
   },
   data() {
     return {
+      modalTitle: "",
+      visible: false,
       toName: "",
       fromName: "",
-      selectedName: "",
+      value: "",
+      selected: {},
       options: {
         useLongPressInMobile: false,
         menuWrapperCss: {
@@ -104,8 +119,15 @@ export default {
           },
           {
             label: "进入目录",
-            tips: "Check",
-            fn: (...args) => console.log("check", args),
+            tips: "Enter",
+            fn: () => {
+              invoke("cwd", {
+                path: this.currentPath,
+              }).then((response) => {
+                store.state.stateList.push("状态：" + response);
+              });
+              this.getData();
+            },
           },
           {
             label: "查看/编辑",
@@ -117,12 +139,66 @@ export default {
             line: true,
           },
           {
-            label: "设置",
-            tips: "Setting",
-            fn: (...args) => console.log("setting", args),
+            label: "创建目录",
+            tips: "Mkdir",
+            fn: () => {
+              this.visible = true;
+              this.modalTitle = "创建目录";
+              this.value = "/" + this.selected.name + "/创建目录";
+            },
+          },
+          {
+            label: "创建文件",
+            tips: "Put",
+            fn: () => {
+              this.visible = true;
+              this.value = "/" + this.selected.name + "/创建文件名";
+              this.modalTitle = "创建文件";
+            },
+          },
+          {
+            label: "刷新",
+            tips: "Refresh",
+            fn: () => {
+              this.getData();
+            },
           },
           {
             line: true,
+          },
+          {
+            label: "删除",
+            tips: "Remove",
+            fn: () => {
+              store.state.stateList.push("命令：删除" + this.selected.name);
+              Modal.confirm({
+                title: "需要确认",
+                icon: createVNode(ExclamationCircleOutlined),
+                content: "确认要从服务器删除一个文件吗？",
+                okText: "确认",
+                cancelText: "取消",
+                onOk: () => {
+                  switch (this.selected.kind) {
+                    case "folder":
+                      invoke("remove_dir", {
+                        path: this.selected.name,
+                      }).then((response) => {
+                        store.state.stateList.push("响应：" + response);
+                        this.getData();
+                      });
+                      break;
+                    default:
+                      invoke("remove_file", {
+                        filename: this.selected.name,
+                      }).then((response) => {
+                        store.state.stateList.push("响应：" + response);
+                        this.getData();
+                      });
+                      break;
+                  }
+                },
+              });
+            },
           },
           {
             label: "重命名",
@@ -135,6 +211,31 @@ export default {
                 }
               }
             },
+          },
+          {
+            label: "复制 URL 到剪贴板",
+            tips: "Copy",
+            fn: () => {
+              store.state.stateList.push("命令：复制URL");
+              invoke("pwd", {}).then((response) => {
+                let text = response + this.selected.name;
+                if (response !== "/") {
+                  text = response + "/" + this.selected.name;
+                }
+                this.$copyText(text)
+                  .then(() => {
+                    store.state.stateList.push("响应：已经复制到了剪贴板");
+                  })
+                  .catch((err) => {
+                    store.state.stateList.push("响应：" + err);
+                  });
+              });
+            },
+          },
+          {
+            label: "文件权限",
+            tips: "Permissions",
+            fn: () => {},
           },
         ],
       },
@@ -229,6 +330,7 @@ export default {
           this.getData();
         },
         onContextmenu: (event) => {
+          this.currentPath = record.name.name;
           document
             .querySelectorAll("tr")
             .forEach((elem) => elem.classList.remove("selected"));
@@ -237,8 +339,10 @@ export default {
             this.dataSource[key].name.showInput = false;
           }
           this.toName = this.fromName = record.name.name;
+          this.selected = record.name;
         },
         onclick: (event) => {
+          this.selected = record.name;
           document
             .querySelectorAll("tr")
             .forEach((elem) => elem.classList.remove("selected"));
@@ -263,6 +367,29 @@ export default {
         this.treeData = [response];
       });
     },
+    handleOk() {
+      switch (this.modalTitle) {
+        case "创建文件":
+          store.state.stateList.push("命令：创建文件" + this.value);
+          invoke("mk_file", {
+            filename: this.value,
+          }).then((response) => {
+            store.state.stateList.push("响应：" + response);
+            this.getData();
+          });
+          break;
+        default:
+          store.state.stateList.push("命令：创建文件夹" + this.value);
+          invoke("mk_dir", {
+            path: this.value,
+          }).then((response) => {
+            store.state.stateList.push("响应：" + response);
+            this.getData();
+          });
+          break;
+      }
+      this.visible = false;
+    },
   },
 
   setup() {
@@ -278,8 +405,15 @@ export default {
 
 <style>
 .ant-table-cell {
-  padding: 0px 5px !important;
+  padding: 2px 5px !important;
   font-size: 10px !important;
+}
+
+.ant-table-thead > tr > th,
+.ant-table-tbody > tr > td,
+.ant-table tfoot > tr > th,
+.ant-table tfoot > tr > td {
+  padding: 2px 5px !important;
 }
 
 .ant-table-container table > thead > tr:first-child th {

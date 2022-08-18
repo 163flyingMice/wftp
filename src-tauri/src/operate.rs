@@ -87,11 +87,11 @@ pub fn pwd() -> String {
 
 #[tauri::command]
 pub fn prev() -> String {
-    let pwd = pwd();
-    let extens: Vec<&str> = pwd.split("/").collect();
-    let path = String::from("/") + &extens[1..(extens.len() - 1)].join("/");
+    // let pwd = pwd();
+    // let extens: Vec<&str> = pwd.split("/").collect();
+    // let path = String::from("/") + &extens[1..(extens.len() - 1)].join("/");
     unsafe {
-        match OWNER_FTP_STREAM.as_mut().unwrap().cwd(&path) {
+        match OWNER_FTP_STREAM.as_mut().unwrap().cdup() {
             Ok(_) => "更改文件夹成功！".to_string(),
             Err(err) => err.to_string(),
         }
@@ -193,6 +193,47 @@ pub fn rename_file(from_name: String, to_name: String) -> String {
             .rename(&from_name, &to_name)
         {
             Ok(_) => "更改文件夹名称成功！".to_string(),
+            Err(err) => err.to_string(),
+        }
+    }
+}
+
+#[tauri::command]
+pub fn remove_file(filename: String) -> String {
+    unsafe {
+        match OWNER_FTP_STREAM.as_mut().unwrap().rm(&filename) {
+            Ok(_) => ("删除文件".to_string() + &filename + "成功！").to_string(),
+            Err(err) => err.to_string(),
+        }
+    }
+}
+
+#[tauri::command]
+pub fn remove_dir(path: String) -> String {
+    unsafe {
+        match OWNER_FTP_STREAM.as_mut().unwrap().rmdir(&path) {
+            Ok(_) => ("删除文件夹".to_string() + &path + "成功！").to_string(),
+            Err(err) => err.to_string(),
+        }
+    }
+}
+
+#[tauri::command]
+pub fn mk_dir(path: String) -> String {
+    unsafe {
+        match OWNER_FTP_STREAM.as_mut().unwrap().mkdir(&path) {
+            Ok(_) => ("创建文件夹".to_string() + &path + "成功！").to_string(),
+            Err(err) => err.to_string(),
+        }
+    }
+}
+
+#[tauri::command]
+pub fn mk_file(filename: String) -> String {
+    unsafe {
+        let mut b = "".as_bytes();
+        match OWNER_FTP_STREAM.as_mut().unwrap().put(&filename, &mut b) {
+            Ok(_) => ("创建文件夹".to_string() + &filename + "成功！").to_string(),
             Err(err) => err.to_string(),
         }
     }

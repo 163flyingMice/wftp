@@ -4,7 +4,10 @@
 )]
 
 pub mod operate;
-use operate::{connect, cwd, folder_list, list, prev, rename_file, try_connect};
+use operate::{
+    connect, cwd, folder_list, list, mk_dir, mk_file, prev, pwd, remove_dir, remove_file,
+    rename_file, try_connect,
+};
 
 fn main() {
     tauri::Builder::default()
@@ -16,6 +19,11 @@ fn main() {
             folder_list,
             prev,
             rename_file,
+            remove_file,
+            remove_dir,
+            mk_dir,
+            pwd,
+            mk_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

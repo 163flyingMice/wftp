@@ -16,6 +16,7 @@
     "ant-design-vue": "^3.2.11",
     "core-js": "^3.8.3",
     "vue": "^3.2.13",
+    "vue-clipboard2": "^0.3.3",
     "vuex": "^4.0.2"
   },
   "devDependencies": {

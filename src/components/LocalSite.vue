@@ -1,8 +1,14 @@
 <template>
+  <a-modal v-model:visible="visible" :wrap-style="{ overflow: 'hidden' }" @ok="handleOk">
+    <a-input v-model:value="value" placeholder="Basic usage" ref="mkdir" />
+    <template #title>
+      <div style="width: 100%; cursor: move">{{ modalTitle }}</div>
+    </template>
+  </a-modal>
   <a-row>
     <a-col style="min-width: 100px !important; width: 100%">
       <div>
-        <a-input :value="currentPath" addon-before="本地站点：" />
+        <a-input :value="currentPath" addon-before="远程站点：" />
         <a-tree
           style="
             overflow-y: auto;
@@ -12,7 +18,6 @@
           :default-expanded-keys="['0']"
           :show-line="true"
           :tree-data="treeData"
-          @select="onSelect"
           :showIcon="false"
         >
           <template #title="{ dataRef }">
@@ -34,6 +39,7 @@
         :data-source="dataSource"
         :pagination="false"
         :customRow="customRow"
+        :scroll="{ x: 800 }"
       >
         <template #bodyCell="{ column, text }">
           <template v-if="column.dataIndex === 'name'"
@@ -48,7 +54,8 @@
               v-model:value="toName"
               :bordered="false"
               placeholder=""
-              pressEnter="rename"
+              @pressEnter.prevent="renameInput"
+              @focus.prevent="handleFocus"
               style="display: inline-block; width: 80px"
             />
             <text v-else>{{ text.name }}</text>
@@ -60,10 +67,16 @@
 </template>
 <script>
 import store from "@/store/index";
-import { FileOutlined, FolderOpenOutlined } from "@ant-design/icons-vue";
+import {
+  FileOutlined,
+  FolderOpenOutlined,
+  ExclamationCircleOutlined,
+} from "@ant-design/icons-vue";
 import { invoke } from "@tauri-apps/api";
-import { readDir } from "@tauri-apps/api/fs";
+import { readDir, createDir, removeDir } from "@tauri-apps/api/fs";
 import { MouseMenuDirective } from "@howdyjs/mouse-menu";
+import { createVNode } from "vue";
+import { Modal } from "ant-design-vue";
 export default {
   directives: {
     MouseMenu: MouseMenuDirective,
@@ -74,9 +87,12 @@ export default {
   },
   data() {
     return {
+      modalTitle: "",
+      visible: false,
       toName: "",
       fromName: "",
-      selectedName: "",
+      value: "",
+      selected: {},
       options: {
         useLongPressInMobile: false,
         menuWrapperCss: {
@@ -92,7 +108,7 @@ export default {
         },
         menuList: [
           {
-            label: "下载",
+            label: "上传",
             tips: "Download",
             fn: (...args) => console.log("download", args),
           },
@@ -103,8 +119,15 @@ export default {
           },
           {
             label: "进入目录",
-            tips: "Check",
-            fn: (...args) => console.log("check", args),
+            tips: "Enter",
+            fn: () => {
+              invoke("cwd", {
+                path: this.currentPath,
+              }).then((response) => {
+                store.state.stateList.push("状态：" + response);
+              });
+              this.getData();
+            },
           },
           {
             label: "查看/编辑",
@@ -116,12 +139,61 @@ export default {
             line: true,
           },
           {
-            label: "设置",
-            tips: "Setting",
-            fn: (...args) => console.log("setting", args),
+            label: "创建目录",
+            tips: "Mkdir",
+            fn: () => {
+              this.visible = true;
+              this.modalTitle = "创建目录";
+              this.value = "/" + this.selected.name + "/创建目录";
+            },
+          },
+          {
+            label: "创建文件",
+            tips: "Put",
+            fn: () => {
+              this.visible = true;
+              this.value = "/" + this.selected.name + "/创建文件名";
+              this.modalTitle = "创建文件";
+            },
+          },
+          {
+            label: "刷新",
+            tips: "Refresh",
+            fn: () => {
+              this.getData();
+            },
           },
           {
             line: true,
+          },
+          {
+            label: "删除",
+            tips: "Remove",
+            fn: () => {
+              Modal.confirm({
+                title: "需要确认",
+                icon: createVNode(ExclamationCircleOutlined),
+                content: "确认要从服务器删除一个文件吗？",
+                okText: "确认",
+                cancelText: "取消",
+                onOk: () => {
+                  switch (this.selected.kind) {
+                    case "folder":
+                      removeDir(this.selected.path).then(() => {});
+                      this.getData();
+                      break;
+                    default:
+                      invoke("remove_file", {
+                        filename: this.selected.name,
+                      }).then((response) => {
+                        store.state.stateList.push("响应：" + response);
+                        this.getData();
+                      });
+                      break;
+                  }
+                },
+              });
+            },
           },
           {
             label: "重命名",
@@ -129,6 +201,7 @@ export default {
             fn: () => {
               for (const key in this.dataSource) {
                 if (this.dataSource[key].name.name == this.fromName) {
+                  store.state.stateList.push("命令：修改文件夹" + this.fromName);
                   this.dataSource[key].name.showInput = true;
                 }
               }
@@ -166,27 +239,47 @@ export default {
           key: "update_at",
           width: 100,
         },
+        {
+          title: "权限",
+          dataIndex: "permissions",
+          key: "permissions",
+          width: 100,
+        },
+        {
+          title: "所有者",
+          dataIndex: "owner",
+          key: "owner",
+          width: 50,
+        },
+        {
+          title: "组",
+          dataIndex: "group",
+          key: "group",
+          width: 50,
+        },
       ],
     };
   },
 
   mounted() {
-    if (this.focusInput) {
-      document.querySelector(".showInput").focus();
-    }
     this.getData();
   },
   methods: {
     getData() {
       this.getTreeData();
-      readDir("C:/").then((response) => {
-        let folder_list = new Array();
+      readDir(this.currentPath).then((response) => {
+        let folder_list = [
+          {
+            name: { name: "..", kind: "folder", path: ".." },
+            is_directory: "文件夹",
+          },
+        ];
         response.forEach((elem) => {
           let temp = {};
           temp.name = {};
           temp.name.name = elem.name;
           temp.name.kind = "file";
-          temp.path = elem.path;
+          temp.name.path = elem.path.replaceAll("\\", "/");
           temp.is_directory = "文件";
           if (elem.children != undefined) {
             temp.name.kind = "folder";
@@ -202,72 +295,136 @@ export default {
       return {
         align: "left",
         onDblclick: () => {
-          let prevPath = Object.assign("", this.currentPath);
-          this.prevPath += prevPath;
-          if (record.name.name != "..") {
-            this.currentPath = record.name.name;
-            invoke("cwd", {
-              path: this.currentPath,
-            }).then((response) => {
-              store.state.stateList.push("状态：" + response);
-            });
-          } else {
-            this.currentPath = this.prevPath;
-            invoke("prev").then((response) => {
-              store.state.stateList.push("状态：" + response);
-            });
+          let path = record.name.path;
+          if (path == "..") {
+            let temp = this.currentPath.split("/");
+            temp.pop();
+            path = temp.join("/");
           }
+          if (!path) {
+            path = "/";
+          }
+          this.currentPath = path;
           this.getData();
         },
-        onContextmenu: () => {
+        onContextmenu: (event) => {
+          this.currentPath = record.name.name;
+          document
+            .querySelectorAll("tr")
+            .forEach((elem) => elem.classList.remove("selected"));
+          event.target.parentElement.className = "selected";
           for (const key in this.dataSource) {
             this.dataSource[key].name.showInput = false;
           }
-          this.fromName = record.name.name;
+          this.toName = this.fromName = record.name.name;
+          this.selected = record.name;
+        },
+        onclick: (event) => {
+          this.selected = record.name;
+          document
+            .querySelectorAll("tr")
+            .forEach((elem) => elem.classList.remove("selected"));
+          event.target.parentElement.className = "selected";
         },
       };
     },
-    rename() {
+    renameInput() {
       invoke("rename_file", {
         fromName: this.fromName,
         toName: this.toName,
-      }).then(() => {});
+      }).then((response) => {
+        store.state.stateList.push("响应：" + response);
+      });
+      this.getData();
+    },
+    handleFocus(event) {
+      console.log(event.target.select());
     },
     getTreeData() {
-      //let dir = ["C:/", "D:/", "E:/", "F:/"];
+      let dir = ["C:/", "D:/", "E:/", "F:/"];
       let folder_list = {};
-      folder_list.children = [];
       folder_list.key = "0";
       folder_list.title = "/";
-      readDir("C:").then((response) => {
-        response.forEach((elem, index) => {
-          let temp = {};
-          temp.key = folder_list.key + "-" + index;
-          temp.title = elem.name;
-          folder_list.children.push(temp);
+      folder_list.children = new Array(5);
+      folder_list.children.push({
+        title: "文档",
+        key: "0-0",
+      });
+      dir.forEach((elem_dir, index) => {
+        let temp = [];
+        readDir(elem_dir)
+          .then((response) => {
+            for (let i = 1; i < response.length; i++) {
+              temp.push({
+                title: response[i].name,
+                key: folder_list.key + "-" + (index + 1) + "-" + i,
+              });
+            }
+          })
+          .catch((err) => {
+            console.log(err);
+          });
+        folder_list.children.push({
+          title: elem_dir,
+          key: folder_list.key + "-" + (index + 1),
+          children: temp,
         });
       });
-      this.treeData = [folder_list];
+      setTimeout(() => {
+        this.treeData = [folder_list];
+      }, 1);
+    },
+    handleOk() {
+      switch (this.modalTitle) {
+        case "创建文件":
+          store.state.stateList.push("命令：创建文件" + this.value);
+          invoke("mk_file", {
+            filename: this.value,
+          }).then((response) => {
+            store.state.stateList.push("响应：" + response);
+            this.getData();
+          });
+          break;
+        default:
+          createDir(this.value)
+            .then((response) => {
+              console.log(response);
+              this.getData();
+            })
+            .catch((err) => {
+              console.log(err);
+            });
+          break;
+      }
+      this.visible = false;
     },
   },
 
-  setup() {
-    const onSelect = (selectedKeys, info) => {
-      console.log("selected", selectedKeys, info);
-    };
-    return {
-      onSelect,
-    };
-  },
+  setup() {},
 };
 </script>
 
 <style>
 .ant-table-cell {
-  padding: 0px 5px !important;
+  padding: 2px 5px !important;
   font-size: 10px !important;
 }
+
+.ant-table-thead > tr > th,
+.ant-table-tbody > tr > td,
+.ant-table tfoot > tr > th,
+.ant-table tfoot > tr > td {
+  padding: 2px 5px !important;
+}
+
 .ant-table-container table > thead > tr:first-child th {
   font-weight: bolder;
+}
+
+.selected {
+  background-color: #1890ff;
+}
+.ant-table-cell-row-hover {
+  background-color: white !important;
 }
 </style>
