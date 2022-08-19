@@ -1,12 +1,15 @@
 <template>
   <a-row>
+    <menu-bar />
+  </a-row>
+  <a-row>
     <action-button />
   </a-row>
   <a-row>
     <input-row />
   </a-row>
   <a-row>
-    <a-col :span="24" style="overflow-y: auto; max-height: 100px">
+    <a-col :span="24" style="overflow-y: auto; max-height: 50px">
       <state-list />
     </a-col>
   </a-row>
@@ -23,6 +26,7 @@
       <transfe-list />
     </a-col>
   </a-row>
+  <a-row> </a-row>
 </template>
 
 <script>
@@ -33,6 +37,7 @@ import ActionButton from "./components/ActionButton.vue";
 import StateList from "./components/StateList.vue";
 import InputRow from "./components/InputRow.vue";
 import TransfeList from "./components/TransfeList.vue";
+import MenuBar from "./components/MenuBar.vue";
 import { invoke } from "@tauri-apps/api";
 invoke("connect", {
   addr: "127.0.0.1:21",
@@ -46,6 +51,7 @@ export default {
   name: "App",
   components: {
     StateList,
+    MenuBar,
     TransfeList,
     RemoteSite,
     LocalSite,
@@ -57,13 +63,12 @@ export default {
 
 <style>
 .ant-row {
-  padding: 5px 0px !important;
-  border: 1px solid black;
+  padding: 4px 0px 4px 1px !important;
+  border: 2px solid silver;
 }
 #app {
   font-size: 12px !important;
   overflow: hidden;
-  cursor: pointer;
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

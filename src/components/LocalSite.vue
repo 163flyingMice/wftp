@@ -39,7 +39,7 @@
         :data-source="dataSource"
         :pagination="false"
         :customRow="customRow"
-        :scroll="{ x: 800 }"
+        :scroll="{ x: 600 }"
       >
         <template #bodyCell="{ column, text }">
           <template v-if="column.dataIndex === 'name'"
@@ -58,7 +58,9 @@
               @focus.prevent="handleFocus"
               style="display: inline-block; width: 80px"
             />
-            <text v-else>{{ text.name }}</text>
+            <text v-else :title="text.name">{{
+              text.name.length > 20 ? text.name.slice(0, 20) + "..." : text.name
+            }}</text>
           </template>
         </template>
       </a-table></a-col
@@ -240,7 +242,7 @@ export default {
           title: "文件名",
           dataIndex: "name",
           key: "name",
-          width: 300,
+          width: 150,
         },
         {
           title: "文件大小",
@@ -252,31 +254,13 @@ export default {
           title: "文件类型",
           dataIndex: "is_directory",
           key: "is_directory",
-          width: 150,
+          width: 100,
         },
         {
           title: "最近修改",
           dataIndex: "update_at",
           key: "update_at",
           width: 100,
-        },
-        {
-          title: "权限",
-          dataIndex: "permissions",
-          key: "permissions",
-          width: 100,
-        },
-        {
-          title: "所有者",
-          dataIndex: "owner",
-          key: "owner",
-          width: 50,
-        },
-        {
-          title: "组",
-          dataIndex: "group",
-          key: "group",
-          width: 50,
         },
       ],
     };

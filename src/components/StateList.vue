@@ -1,5 +1,5 @@
 <template>
-  <a-list size="small" bordered :data-source="data" class="stateScroll">
+  <a-list size="small" :data-source="data" class="stateScroll">
     <template #renderItem="{ item }">
       <a-list-item>{{ item }}</a-list-item>
     </template>
@@ -30,3 +30,12 @@ export default defineComponent({
   },
 });
 </script>
+<style>
+.ant-list-sm .ant-list-item {
+  font-size: 12px !important;
+  padding: 4px 2px !important;
+}
+.ant-list-split .ant-list-item {
+  border-bottom: none !important;
+}
+</style>

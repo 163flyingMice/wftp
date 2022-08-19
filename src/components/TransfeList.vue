@@ -1,11 +1,33 @@
 <template>
-  <a-table
-    :columns="columns"
-    :data-source="dataSource"
-    :pagination="false"
-    :scroll="{ x: 800 }"
-  >
-  </a-table>
+  <a-tabs v-model:activeKey="activeKey" tab-position="bottom" type="card">
+    <a-tab-pane key="1" tab="列队的文件" :border="false">
+      <a-table
+        :columns="columns"
+        :data-source="dataSource"
+        :pagination="false"
+        :scroll="{ x: 800 }"
+      >
+      </a-table
+    ></a-tab-pane>
+    <a-tab-pane key="2" tab="传输失败">
+      <a-table
+        :columns="columns"
+        :data-source="dataSource"
+        :pagination="false"
+        :scroll="{ x: 800 }"
+      >
+      </a-table
+    ></a-tab-pane>
+    <a-tab-pane key="3" tab="成功的传输">
+      <a-table
+        :columns="columns"
+        :data-source="dataSource"
+        :pagination="false"
+        :scroll="{ x: 800 }"
+      >
+      </a-table
+    ></a-tab-pane>
+  </a-tabs>
 </template>
 
 <script>
@@ -55,3 +77,17 @@ export default {
   },
 };
 </script>
+<style>
+.ant-tabs-tab {
+  padding: 2px 2px !important;
+  text-decoration: none;
+  font-size: 12px;
+}
+.ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: black !important;
+}
+
+.ant-tabs-tab-btn:hover {
+  color: black !important;
+}
+</style>

@@ -35,7 +35,7 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.tauri.dev",
+      "identifier": "com.tauri.build",
       "longDescription": "",
       "macOS": {
         "entitlements": null,
@@ -62,7 +62,7 @@
     "windows": [
       {
         "fullscreen": false,
-        "height": 944,
+        "height": 900,
         "resizable": true,
         "title": "wftp",
         "width": 1136

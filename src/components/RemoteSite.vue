@@ -59,7 +59,9 @@
               @focus.prevent="handleFocus"
               style="display: inline-block; width: 80px"
             />
-            <text v-else>{{ text.name }}</text>
+            <text v-else :title="text.name">{{
+              text.name.length > 20 ? text.name.slice(0, 20) + "..." : text.name
+            }}</text>
           </template>
         </template>
       </a-table></a-col
@@ -249,7 +251,7 @@ export default {
           title: "文件名",
           dataIndex: "name",
           key: "name",
-          width: 300,
+          width: 150,
         },
         {
           title: "文件大小",
