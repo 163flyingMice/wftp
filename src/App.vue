@@ -19,7 +19,9 @@
     </a-col>
   </a-row>
   <a-row>
-    <a-col :span="24">col-24</a-col>
+    <a-col :span="20">
+      <transfe-list />
+    </a-col>
   </a-row>
 </template>
 
@@ -30,6 +32,7 @@ import LocalSite from "./components/LocalSite.vue";
 import ActionButton from "./components/ActionButton.vue";
 import StateList from "./components/StateList.vue";
 import InputRow from "./components/InputRow.vue";
+import TransfeList from "./components/TransfeList.vue";
 import { invoke } from "@tauri-apps/api";
 invoke("connect", {
   addr: "127.0.0.1:21",
@@ -43,6 +46,7 @@ export default {
   name: "App",
   components: {
     StateList,
+    TransfeList,
     RemoteSite,
     LocalSite,
     InputRow,

@@ -1,8 +1,8 @@
 extern crate ftp;
-use std::collections::HashMap;
-
+use base64_stream::base64::decode;
 use ftp::FtpStream;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FolderTree {
@@ -112,6 +112,7 @@ pub fn cwd(path: String) -> String {
 pub fn list(path: String) -> Vec<FileList> {
     let mut list: Vec<String> = Vec::new();
     unsafe {
+        OWNER_FTP_STREAM.as_mut().unwrap().noop();
         list = OWNER_FTP_STREAM
             .as_mut()
             .unwrap()
@@ -160,11 +161,8 @@ pub fn list(path: String) -> Vec<FileList> {
 pub fn folder_list() -> FolderTree {
     let mut list: Vec<String> = Vec::new();
     unsafe {
-        list = OWNER_FTP_STREAM
-            .as_mut()
-            .unwrap()
-            .list(None)
-            .expect("获取列表失败！");
+        let mut ftp_stream = OWNER_FTP_STREAM.as_mut().unwrap();
+        list = ftp_stream.list(None).expect("获取列表失败！");
     }
     let mut folder_tree = FolderTree::new();
     let mut folder_leaf = Vec::new();
@@ -234,6 +232,18 @@ pub fn mk_file(filename: String) -> String {
         let mut b = "".as_bytes();
         match OWNER_FTP_STREAM.as_mut().unwrap().put(&filename, &mut b) {
             Ok(_) => ("创建文件夹".to_string() + &filename + "成功！").to_string(),
+            Err(err) => err.to_string(),
+        }
+    }
+}
+
+#[tauri::command]
+pub fn upload(filename: String, content: String) -> String {
+    unsafe {
+        let temp = decode(content).unwrap();
+        let mut b = temp.as_slice();
+        match OWNER_FTP_STREAM.as_mut().unwrap().put(&filename, &mut b) {
+            Ok(_) => ("创建文件".to_string() + &filename + "成功！").to_string(),
             Err(err) => err.to_string(),
         }
     }

@@ -6,7 +6,7 @@
 pub mod operate;
 use operate::{
     connect, cwd, folder_list, list, mk_dir, mk_file, prev, pwd, remove_dir, remove_file,
-    rename_file, try_connect,
+    rename_file, try_connect, upload,
 };
 
 fn main() {
@@ -24,6 +24,7 @@ fn main() {
             mk_dir,
             pwd,
             mk_file,
+            upload,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

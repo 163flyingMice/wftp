@@ -1,6 +1,6 @@
 <template>
   <a-modal v-model:visible="visible" :wrap-style="{ overflow: 'hidden' }" @ok="handleOk">
-    <a-input v-model:value="value" placeholder="Basic usage" ref="mkdir" />
+    <a-input v-model:value="value" placeholder="" ref="mkdir" />
     <template #title>
       <div style="width: 100%; cursor: move">{{ modalTitle }}</div>
     </template>
@@ -8,7 +8,7 @@
   <a-row>
     <a-col style="min-width: 100px !important; width: 100%">
       <div>
-        <a-input :value="currentPath" addon-before="远程站点：" />
+        <a-input :value="currentPath" addon-before="本地站点：" />
         <a-tree
           style="
             overflow-y: auto;
@@ -66,17 +66,24 @@
   </a-row>
 </template>
 <script>
-import store from "@/store/index";
 import {
   FileOutlined,
   FolderOpenOutlined,
   ExclamationCircleOutlined,
 } from "@ant-design/icons-vue";
-import { invoke } from "@tauri-apps/api";
-import { readDir, createDir, removeDir } from "@tauri-apps/api/fs";
+import {
+  readDir,
+  createDir,
+  removeDir,
+  renameFile,
+  writeBinaryFile,
+  removeFile,
+  readBinaryFile,
+} from "@tauri-apps/api/fs";
 import { MouseMenuDirective } from "@howdyjs/mouse-menu";
 import { createVNode } from "vue";
 import { Modal } from "ant-design-vue";
+import { invoke } from "@tauri-apps/api/tauri";
 export default {
   directives: {
     MouseMenu: MouseMenuDirective,
@@ -109,8 +116,31 @@ export default {
         menuList: [
           {
             label: "上传",
-            tips: "Download",
-            fn: (...args) => console.log("download", args),
+            tips: "Upload",
+            fn: () => {
+              switch (this.selected.kind) {
+                case "folder":
+                  break;
+                default:
+                  readBinaryFile(this.selected.path)
+                    .then((response) => {
+                      invoke("upload", {
+                        filename: this.selected.name,
+                        content: this.arrayBufferToBase64(response),
+                      })
+                        .then((response) => {
+                          console.log(response);
+                        })
+                        .catch((err) => {
+                          console.log(err);
+                        });
+                    })
+                    .catch((err) => {
+                      console.log(err);
+                    });
+                  break;
+              }
+            },
           },
           {
             label: "添加文件到队列",
@@ -121,11 +151,7 @@ export default {
             label: "进入目录",
             tips: "Enter",
             fn: () => {
-              invoke("cwd", {
-                path: this.currentPath,
-              }).then((response) => {
-                store.state.stateList.push("状态：" + response);
-              });
+              this.currentPath = this.selected.path;
               this.getData();
             },
           },
@@ -144,7 +170,6 @@ export default {
             fn: () => {
               this.visible = true;
               this.modalTitle = "创建目录";
-              this.value = "/" + this.selected.name + "/创建目录";
             },
           },
           {
@@ -152,7 +177,6 @@ export default {
             tips: "Put",
             fn: () => {
               this.visible = true;
-              this.value = "/" + this.selected.name + "/创建文件名";
               this.modalTitle = "创建文件";
             },
           },
@@ -179,14 +203,12 @@ export default {
                 onOk: () => {
                   switch (this.selected.kind) {
                     case "folder":
-                      removeDir(this.selected.path).then(() => {});
-                      this.getData();
+                      removeDir(this.selected.path).then(() => {
+                        this.getData();
+                      });
                       break;
                     default:
-                      invoke("remove_file", {
-                        filename: this.selected.name,
-                      }).then((response) => {
-                        store.state.stateList.push("响应：" + response);
+                      removeFile(this.selected.path).then(() => {
                         this.getData();
                       });
                       break;
@@ -201,7 +223,6 @@ export default {
             fn: () => {
               for (const key in this.dataSource) {
                 if (this.dataSource[key].name.name == this.fromName) {
-                  store.state.stateList.push("命令：修改文件夹" + this.fromName);
                   this.dataSource[key].name.showInput = true;
                 }
               }
@@ -219,7 +240,7 @@ export default {
           title: "文件名",
           dataIndex: "name",
           key: "name",
-          width: 200,
+          width: 300,
         },
         {
           title: "文件大小",
@@ -265,7 +286,17 @@ export default {
     this.getData();
   },
   methods: {
+    arrayBufferToBase64(buffer) {
+      var binary = "";
+      var bytes = new Uint8Array(buffer);
+      var len = bytes.byteLength;
+      for (var i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return window.btoa(binary);
+    },
     getData() {
+      this.toName = "";
       this.getTreeData();
       readDir(this.currentPath).then((response) => {
         let folder_list = [
@@ -295,6 +326,12 @@ export default {
       return {
         align: "left",
         onDblclick: () => {
+          document
+            .querySelectorAll("tr")
+            .forEach((elem) => elem.classList.remove("selected"));
+          for (const key in this.dataSource) {
+            this.dataSource[key].name.showInput = false;
+          }
           let path = record.name.path;
           if (path == "..") {
             let temp = this.currentPath.split("/");
@@ -308,7 +345,6 @@ export default {
           this.getData();
         },
         onContextmenu: (event) => {
-          this.currentPath = record.name.name;
           document
             .querySelectorAll("tr")
             .forEach((elem) => elem.classList.remove("selected"));
@@ -329,16 +365,18 @@ export default {
       };
     },
     renameInput() {
-      invoke("rename_file", {
-        fromName: this.fromName,
-        toName: this.toName,
-      }).then((response) => {
-        store.state.stateList.push("响应：" + response);
+      let path = "";
+      if (this.currentPath != "/") {
+        path = this.currentPath + "/";
+      } else {
+        path = this.currentPath;
+      }
+      renameFile(path + this.fromName, path + this.toName).then(() => {
+        this.getData();
       });
-      this.getData();
     },
     handleFocus(event) {
-      console.log(event.target.select());
+      event.target.select();
     },
     getTreeData() {
       let dir = ["C:/", "D:/", "E:/", "F:/"];
@@ -375,20 +413,21 @@ export default {
       }, 1);
     },
     handleOk() {
+      let path = "";
+      if (this.currentPath != "/") {
+        path = this.currentPath + "/" + this.value;
+      } else {
+        path = this.currentPath + this.value;
+      }
       switch (this.modalTitle) {
         case "创建文件":
-          store.state.stateList.push("命令：创建文件" + this.value);
-          invoke("mk_file", {
-            filename: this.value,
-          }).then((response) => {
-            store.state.stateList.push("响应：" + response);
+          writeBinaryFile(path, new Uint8Array([])).then(() => {
             this.getData();
           });
           break;
         default:
-          createDir(this.value)
-            .then((response) => {
-              console.log(response);
+          createDir(path)
+            .then(() => {
               this.getData();
             })
             .catch((err) => {

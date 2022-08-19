@@ -249,7 +249,7 @@ export default {
           title: "文件名",
           dataIndex: "name",
           key: "name",
-          width: 200,
+          width: 300,
         },
         {
           title: "文件大小",
@@ -360,7 +360,7 @@ export default {
       this.getData();
     },
     handleFocus(event) {
-      console.log(event.target.select());
+      event.target.select();
     },
     getTreeData() {
       invoke("folder_list", {}).then((response) => {
