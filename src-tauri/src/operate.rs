@@ -56,14 +56,31 @@ impl FileList {
         }
     }
 }
+
+#[tauri::command]
+pub fn alive() -> String {
+    unsafe {
+        if let Some(_) = OWNER_FTP_STREAM.as_mut() {
+            String::from("已连接")
+        } else {
+            String::from("已断开！")
+        }
+    }
+}
+
 #[tauri::command]
 pub fn connect(addr: String, username: String, password: String) -> String {
-    let mut ftp_stream = FtpStream::connect(&addr).unwrap();
-    let _ = ftp_stream.login(&username, &password);
-    unsafe {
-        OWNER_FTP_STREAM = Some(ftp_stream);
+    let mut ftp_stream;
+    if let Ok(t) = FtpStream::connect(&addr) {
+        ftp_stream = t;
+        let _ = ftp_stream.login(&username, &password);
+        unsafe {
+            OWNER_FTP_STREAM = Some(ftp_stream);
+        }
+        String::from("连接成功！")
+    } else {
+        String::from("连接失败！")
     }
-    String::from("连接成功！")
 }
 
 #[tauri::command]
@@ -78,18 +95,14 @@ pub fn try_connect(addr: String, username: String, password: String) -> String {
 
 #[tauri::command]
 pub fn pwd() -> String {
-    let mut root = "".to_string();
     unsafe {
-        root = OWNER_FTP_STREAM.as_mut().unwrap().pwd().unwrap();
+        let root = OWNER_FTP_STREAM.as_mut().unwrap().pwd().unwrap();
+        root
     }
-    root
 }
 
 #[tauri::command]
 pub fn prev() -> String {
-    // let pwd = pwd();
-    // let extens: Vec<&str> = pwd.split("/").collect();
-    // let path = String::from("/") + &extens[1..(extens.len() - 1)].join("/");
     unsafe {
         match OWNER_FTP_STREAM.as_mut().unwrap().cdup() {
             Ok(_) => "更改文件夹成功！".to_string(),
@@ -109,77 +122,78 @@ pub fn cwd(path: String) -> String {
 }
 
 #[tauri::command]
-pub fn list(path: String) -> Vec<FileList> {
-    let mut list: Vec<String> = Vec::new();
+pub fn list() -> Option<Vec<FileList>> {
     unsafe {
-        OWNER_FTP_STREAM.as_mut().unwrap().noop();
-        list = OWNER_FTP_STREAM
-            .as_mut()
-            .unwrap()
-            .list(None)
-            .expect("获取列表失败！");
-    }
-    let mut file_list = vec![FileList::new()];
-    for param in &list {
-        let temp = param
-            .trim()
-            .split(" ")
-            .map(|s| s.to_string())
-            .collect::<Vec<String>>();
-        let temp_len = temp.len();
-        let mut is_directory: String = "".to_string();
-        let first_at = temp.iter().nth(0).unwrap().chars().next().unwrap();
-        let mut name = HashMap::new();
-        let temp_name = temp.iter().nth(temp_len - 1).unwrap().to_string();
-        if first_at == 'd' {
-            is_directory = "文件夹".to_string();
-            name.insert(String::from("kind"), String::from("folder"));
+        if let Some(ftp_stream) = OWNER_FTP_STREAM.as_mut() {
+            let _ = ftp_stream.noop();
+            let list = ftp_stream.list(None).expect("获取列表失败！");
+            let mut file_list = vec![FileList::new()];
+            for param in &list {
+                let temp = param
+                    .trim()
+                    .split(" ")
+                    .map(|s| s.to_string())
+                    .collect::<Vec<String>>();
+                let temp_len = temp.len();
+                let is_directory: String;
+                let first_at = temp.iter().nth(0).unwrap().chars().next().unwrap();
+                let mut name = HashMap::new();
+                let temp_name = temp.iter().nth(temp_len - 1).unwrap().to_string();
+                if first_at == 'd' {
+                    is_directory = "文件夹".to_string();
+                    name.insert(String::from("kind"), String::from("folder"));
+                } else {
+                    let extens: Vec<&str> = temp_name.split(".").collect();
+                    is_directory = extens[(extens.len() - 1)].to_string().to_uppercase() + " 文件";
+                    name.insert(String::from("kind"), String::from("file"));
+                }
+                name.insert(String::from("name"), temp_name);
+                file_list.push(FileList {
+                    permissions: temp.iter().nth(0).unwrap().to_string(),
+                    owner: temp.iter().nth(2).unwrap().to_string(),
+                    group: temp.iter().nth(3).unwrap().to_string(),
+                    size: temp.iter().nth(temp_len - 6).unwrap().to_string(),
+                    is_directory: is_directory,
+                    update_at: temp.iter().nth(temp_len - 4).unwrap().to_string()
+                        + " "
+                        + temp.iter().nth(temp_len - 3).unwrap()
+                        + " "
+                        + temp.iter().nth(temp_len - 2).unwrap(),
+                    name: name,
+                });
+            }
+            Some(file_list)
         } else {
-            let extens: Vec<&str> = temp_name.split(".").collect();
-            is_directory = extens[(extens.len() - 1)].to_string().to_uppercase() + " 文件";
-            name.insert(String::from("kind"), String::from("file"));
+            None
         }
-        name.insert(String::from("name"), temp_name);
-        file_list.push(FileList {
-            permissions: temp.iter().nth(0).unwrap().to_string(),
-            owner: temp.iter().nth(2).unwrap().to_string(),
-            group: temp.iter().nth(3).unwrap().to_string(),
-            size: temp.iter().nth(temp_len - 6).unwrap().to_string(),
-            is_directory: is_directory,
-            update_at: temp.iter().nth(temp_len - 4).unwrap().to_string()
-                + " "
-                + temp.iter().nth(temp_len - 3).unwrap()
-                + " "
-                + temp.iter().nth(temp_len - 2).unwrap(),
-            name: name,
-        });
     }
-    file_list
 }
 
 #[tauri::command]
-pub fn folder_list() -> FolderTree {
-    let mut list: Vec<String> = Vec::new();
+pub fn folder_list() -> Option<FolderTree> {
     unsafe {
-        let mut ftp_stream = OWNER_FTP_STREAM.as_mut().unwrap();
-        list = ftp_stream.list(None).expect("获取列表失败！");
+        if let Some(ftp_stream) = OWNER_FTP_STREAM.as_mut() {
+            let list = ftp_stream.list(None).expect("获取列表失败！");
+            let mut folder_tree = FolderTree::new();
+            let mut folder_leaf = Vec::new();
+            for param in &list {
+                let temp = param
+                    .trim()
+                    .split(" ")
+                    .map(|s| s.to_string())
+                    .collect::<Vec<String>>();
+                let temp_len = temp.len();
+                folder_leaf.push(FolderLeaf {
+                    title: temp.iter().nth(temp_len - 1).unwrap().to_string(),
+                    key: String::from("0-1"),
+                });
+            }
+            folder_tree.children = Some(folder_leaf);
+            Some(folder_tree)
+        } else {
+            None
+        }
     }
-    let mut folder_tree = FolderTree::new();
-    let mut folder_leaf = Vec::new();
-    for param in &list {
-        let temp = param
-            .trim()
-            .split(" ")
-            .map(|s| s.to_string())
-            .collect::<Vec<String>>();
-        let temp_len = temp.len();
-        folder_leaf.push(FolderLeaf {
-            title: temp.iter().nth(temp_len - 1).unwrap().to_string(),
-            key: String::from("0-1"),
-        });
-    }
-    folder_tree.children = Some(folder_leaf);
-    folder_tree
 }
 
 #[tauri::command]

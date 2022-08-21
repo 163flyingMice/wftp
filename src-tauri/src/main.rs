@@ -3,13 +3,15 @@
     windows_subsystem = "windows"
 )]
 
+pub mod config;
 pub mod operate;
 use operate::{
-    connect, cwd, folder_list, list, mk_dir, mk_file, prev, pwd, remove_dir, remove_file,
+    alive, connect, cwd, folder_list, list, mk_dir, mk_file, prev, pwd, remove_dir, remove_file,
     rename_file, try_connect, upload,
 };
 
 fn main() {
+    config::init();
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             try_connect,
@@ -25,6 +27,7 @@ fn main() {
             pwd,
             mk_file,
             upload,
+            alive,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

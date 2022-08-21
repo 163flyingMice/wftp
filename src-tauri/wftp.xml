@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wftp version="1.0" platform="windows">
+	<Servers>
+		<Server>
+			<Host>
+				120.76.76.154
+			</Host>
+			<Port>
+				65521
+			</Port>
+			<User>
+				zhangwenhao
+			</User>
+			<Pass>
+				am01MjAxMzE0
+			</Pass>
+		</Server>
+		<Server>
+			<Host>
+				120.76.76.154
+			</Host>
+			<Port>
+				65521
+			</Port>
+			<User>
+				zhangwenhao
+			</User>
+			<Pass>
+				am01MjAxMzE0
+			</Pass>
+		</Server>
+	</Servers>
+</wftp>
