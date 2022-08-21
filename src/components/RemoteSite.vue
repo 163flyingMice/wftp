@@ -5,22 +5,16 @@
       <div style="width: 100%; cursor: move">{{ modalTitle }}</div>
     </template>
   </a-modal>
-  <a-row>
+  <a-row v-show="state">
     <a-col style="min-width: 100px !important; width: 100%">
       <div>
         <a-input :value="currentPath" addon-before="远程站点：" />
-        <a-tree
-          style="
+        <a-tree style="
             overflow-y: auto;
             max-height: 100px !important;
             min-height: 100px !important;
-          "
-          :default-expanded-keys="['0']"
-          :show-line="true"
-          :tree-data="treeData"
-          @select="onSelect"
-          :showIcon="false"
-        >
+          " :default-expanded-keys="['0']" :show-line="true" :tree-data="treeData" @select="onSelect"
+          :showIcon="false">
           <template #title="{ dataRef }">
             <template v-if="dataRef.key === '0-0-0-1'">
               <div>multiple line title</div>
@@ -29,43 +23,27 @@
             <template v-else>{{ dataRef.title }}</template>
           </template>
         </a-tree>
-      </div></a-col
-    >
+      </div>
+    </a-col>
   </a-row>
-  <a-row style="min-height: 300px; max-height: 300px; overflow: auto">
+  <a-row style="min-height: 300px !important; max-height: 300px; overflow: auto" class="remoteTable">
     <a-col style="">
-      <a-table
-        v-mouse-menu="options"
-        :columns="columns"
-        :data-source="dataSource"
-        :pagination="false"
-        :customRow="customRow"
-        :scroll="{ x: 800 }"
-      >
+      <a-table v-mouse-menu="options" :columns="columns" :data-source="dataSource" :pagination="false"
+        :customRow="customRow" :scroll="{ x: 800 }">
         <template #bodyCell="{ column, text }">
-          <template v-if="column.dataIndex === 'name'"
-            ><folder-open-outlined
-              :style="{ color: '#ffe896' }"
-              v-if="text.kind === 'folder'"
-            />
+          <template v-if="column.dataIndex === 'name'">
+            <folder-open-outlined :style="{ color: '#ffe896' }" v-if="text.kind === 'folder'" />
             <file-outlined v-else />
-            <a-input
-              class="showInput"
-              v-if="text.showInput"
-              v-model:value="toName"
-              :bordered="false"
-              placeholder=""
-              @pressEnter.prevent="renameInput"
-              @focus.prevent="handleFocus"
-              style="display: inline-block; width: 80px"
-            />
+            <a-input class="showInput" v-if="text.showInput" v-model:value="toName" :bordered="false" placeholder=""
+              @pressEnter.prevent="renameInput" @focus.prevent="handleFocus"
+              style="display: inline-block; width: 80px" />
             <text v-else :title="text.name">{{
-              text.name.length > 20 ? text.name.slice(0, 20) + "..." : text.name
+                text.name.length > 20 ? text.name.slice(0, 20) + "..." : text.name
             }}</text>
           </template>
         </template>
-      </a-table></a-col
-    >
+      </a-table>
+    </a-col>
   </a-row>
 </template>
 <script>
@@ -80,6 +58,9 @@ import { MouseMenuDirective } from "@howdyjs/mouse-menu";
 import { createVNode } from "vue";
 import { Modal } from "ant-design-vue";
 export default {
+  props: {
+    state: Boolean,
+  },
   directives: {
     MouseMenu: MouseMenuDirective,
   },
@@ -237,13 +218,14 @@ export default {
           {
             label: "文件权限",
             tips: "Permissions",
-            fn: () => {},
+            fn: () => { },
           },
         ],
       },
       treeData: [],
       prevPath: "/",
       currentPath: "/",
+      dirBool: true,
       dataSource: [],
 
       columns: [
@@ -298,16 +280,18 @@ export default {
   },
   methods: {
     getData() {
-      this.getTreeData();
-      document
-        .querySelectorAll("tr")
-        .forEach((elem) => elem.classList.remove("selected"));
-      invoke("list", {
-        path: this.currentPath,
-      }).then((response) => {
-        store.state.stateList.push("状态：列出“" + this.currentPath + "”的目录成功");
-        this.dataSource = response;
-      });
+      if (store.state.connected) {
+        this.getTreeData();
+        document
+          .querySelectorAll("tr")
+          .forEach((elem) => elem.classList.remove("selected"));
+        invoke("list", {
+          path: this.currentPath,
+        }).then((response) => {
+          store.state.stateList.push("状态：列出“" + this.currentPath + "”的目录成功");
+          this.dataSource = response;
+        });
+      }
     },
 
     customRow(record) {
@@ -411,21 +395,26 @@ export default {
   font-size: 10px !important;
 }
 
-.ant-table-thead > tr > th,
-.ant-table-tbody > tr > td,
-.ant-table tfoot > tr > th,
-.ant-table tfoot > tr > td {
+.ant-table-thead>tr>th,
+.ant-table-tbody>tr>td,
+.ant-table tfoot>tr>th,
+.ant-table tfoot>tr>td {
   padding: 2px 5px !important;
 }
 
-.ant-table-container table > thead > tr:first-child th {
+.ant-table-container table>thead>tr:first-child th {
   font-weight: bolder;
 }
 
 .selected {
   background-color: #1890ff;
 }
+
 .ant-table-cell-row-hover {
   background-color: white !important;
+}
+
+.remoteTable .ant-table-content {
+  min-height: 290px !important;
 }
 </style>

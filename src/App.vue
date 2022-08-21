@@ -8,17 +8,17 @@
   <a-row>
     <input-row />
   </a-row>
-  <a-row>
+  <a-row v-show="stateListState">
     <a-col :span="24" style="overflow-y: auto; max-height: 50px">
       <state-list />
     </a-col>
   </a-row>
   <a-row>
     <a-col :span="12">
-      <local-site />
+      <local-site :state="localSiteState" />
     </a-col>
-    <a-col :span="12" style="max-height: 400px">
-      <remote-site />
+    <a-col :span="12">
+      <remote-site :state="remoteSiteState" />
     </a-col>
   </a-row>
   <a-row>
@@ -39,11 +39,18 @@ import InputRow from "./components/InputRow.vue";
 import TransfeList from "./components/TransfeList.vue";
 import MenuBar from "./components/MenuBar.vue";
 import { invoke } from "@tauri-apps/api";
+invoke("alive", {
+}).then((response) => {
+  console.log(response)
+});
 invoke("connect", {
   addr: "127.0.0.1:21",
   username: "root",
   password: "root",
 }).then((response) => {
+  if (response == "连接成功！") {
+    store.state.connected = true;
+  }
   store.state.stateList.push("状态：" + response);
 });
 
@@ -58,6 +65,17 @@ export default {
     InputRow,
     ActionButton,
   },
+  computed: {
+    localSiteState() {
+      return store.state.localSiteComponent
+    },
+    stateListState() {
+      return store.state.stateListComponent
+    },
+    remoteSiteState() {
+      return store.state.remoteSiteComponent
+    },
+  }
 };
 </script>
 
@@ -66,6 +84,7 @@ export default {
   padding: 4px 0px 4px 1px !important;
   border: 2px solid silver;
 }
+
 #app {
   font-size: 12px !important;
   overflow: hidden;
@@ -79,38 +98,47 @@ export default {
 #components-layout-demo-basic .code-box-demo {
   text-align: center;
 }
+
 #components-layout-demo-basic .ant-layout-header,
 #components-layout-demo-basic .ant-layout-footer {
   color: #fff;
   background: #7dbcea;
 }
+
 [data-theme="dark"] #components-layout-demo-basic .ant-layout-header {
   background: #6aa0c7;
 }
+
 [data-theme="dark"] #components-layout-demo-basic .ant-layout-footer {
   background: #6aa0c7;
 }
+
 #components-layout-demo-basic .ant-layout-footer {
   line-height: 1.5;
 }
+
 #components-layout-demo-basic .ant-layout-sider {
   color: #fff;
   line-height: 120px;
   background: #3ba0e9;
 }
+
 [data-theme="dark"] #components-layout-demo-basic .ant-layout-sider {
   background: #3499ec;
 }
+
 #components-layout-demo-basic .ant-layout-content {
   min-height: 120px;
   color: #fff;
   line-height: 120px;
   background: rgba(16, 142, 233, 1);
 }
+
 [data-theme="dark"] #components-layout-demo-basic .ant-layout-content {
   background: #107bcb;
 }
-#components-layout-demo-basic > .code-box-demo > .ant-layout + .ant-layout {
+
+#components-layout-demo-basic>.code-box-demo>.ant-layout+.ant-layout {
   margin-top: 48px;
 }
 </style>

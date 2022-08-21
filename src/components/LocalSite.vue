@@ -5,66 +5,43 @@
       <div style="width: 100%; cursor: move">{{ modalTitle }}</div>
     </template>
   </a-modal>
-  <a-row>
+  <a-row v-show="state">
     <a-col style="min-width: 100px !important; width: 100%">
       <div>
         <a-input :value="currentPath" addon-before="本地站点：" />
-        <a-tree
-          style="
+        <a-tree style="
             overflow-y: auto;
             max-height: 100px !important;
-            min-height: 100px !important;
-          "
-          :default-expanded-keys="['0']"
-          :show-line="true"
-          :tree-data="treeData"
-          :showIcon="false"
-        >
-          <template #title="{ dataRef }">
-            <template v-if="dataRef.key === '0-0-0-1'">
-              <div>multiple line title</div>
-              <div>multiple line title</div>
-            </template>
-            <template v-else>{{ dataRef.title }}</template>
+            min-height: 100px !important;" :show-icon="true" :tree-data="treeData" @select="changeLocal"
+          :defaultExpandAll="true">
+          <template #title="dataRef">
+            {{ dataRef.title }}
+          </template>
+          <template #switcherIcon="dataRef">
+            <PlusSquareOutlined @click="searchTree(dataRef)" />
           </template>
         </a-tree>
-      </div></a-col
-    >
+      </div>
+    </a-col>
   </a-row>
   <a-row style="min-height: 300px; max-height: 300px; overflow: auto">
-    <a-col style="">
-      <a-table
-        v-mouse-menu="options"
-        :columns="columns"
-        :data-source="dataSource"
-        :pagination="false"
-        :customRow="customRow"
-        :scroll="{ x: 600 }"
-      >
+    <a-col>
+      <a-table class="localTable" v-mouse-menu="options" :columns="columns" :data-source="dataSource"
+        :pagination="false" :customRow="customRow" :scroll="{ x: 600 }" style="" :customHeaderRow="customHeaderRow">
         <template #bodyCell="{ column, text }">
-          <template v-if="column.dataIndex === 'name'"
-            ><folder-open-outlined
-              :style="{ color: '#ffe896' }"
-              v-if="text.kind === 'folder'"
-            />
+          <template v-if="column.dataIndex === 'name'">
+            <folder-open-outlined :style="{ color: '#ffe896' }" v-if="text.kind === 'folder'" />
             <file-outlined v-else />
-            <a-input
-              class="showInput"
-              v-if="text.showInput"
-              v-model:value="toName"
-              :bordered="false"
-              placeholder=""
-              @pressEnter.prevent="renameInput"
-              @focus.prevent="handleFocus"
-              style="display: inline-block; width: 80px"
-            />
+            <a-input class="showInput" v-if="text.showInput" v-model:value="toName" :bordered="false" placeholder=""
+              @pressEnter.prevent="renameInput" @focus.prevent="handleFocus"
+              style="display: inline-block; width: 80px" />
             <text v-else :title="text.name">{{
-              text.name.length > 20 ? text.name.slice(0, 20) + "..." : text.name
+                text.name.length > 20 ? text.name.slice(0, 20) + "..." : text.name
             }}</text>
           </template>
         </template>
-      </a-table></a-col
-    >
+      </a-table>
+    </a-col>
   </a-row>
 </template>
 <script>
@@ -72,6 +49,7 @@ import {
   FileOutlined,
   FolderOpenOutlined,
   ExclamationCircleOutlined,
+  PlusSquareOutlined,
 } from "@ant-design/icons-vue";
 import {
   readDir,
@@ -81,21 +59,28 @@ import {
   writeBinaryFile,
   removeFile,
   readBinaryFile,
+  BaseDirectory,
 } from "@tauri-apps/api/fs";
 import { MouseMenuDirective } from "@howdyjs/mouse-menu";
-import { createVNode } from "vue";
+import { createVNode, ref } from "vue";
 import { Modal } from "ant-design-vue";
 import { invoke } from "@tauri-apps/api/tauri";
+import store from "@/store";
 export default {
+  props: {
+    state: Boolean,
+  },
   directives: {
     MouseMenu: MouseMenuDirective,
   },
   components: {
     FileOutlined,
     FolderOpenOutlined,
+    PlusSquareOutlined,
   },
   data() {
     return {
+      selectedKey: "",
       modalTitle: "",
       visible: false,
       toName: "",
@@ -143,11 +128,23 @@ export default {
                   break;
               }
             },
+            disabled: () => {
+              if (store.state.connected) {
+                return false
+              }
+              return true
+            },
           },
           {
             label: "添加文件到队列",
             tips: "Add",
             fn: (...args) => console.log("add", args),
+            disabled: () => {
+              if (store.state.connected) {
+                return false
+              }
+              return true
+            },
           },
           {
             label: "进入目录",
@@ -155,6 +152,14 @@ export default {
             fn: () => {
               this.currentPath = this.selected.path;
               this.getData();
+            },
+            disabled: () => {
+              switch (this.selected.kind) {
+                case "folder":
+                  return false
+                default:
+                  return true
+              }
             },
           },
           {
@@ -232,7 +237,6 @@ export default {
           },
         ],
       },
-      treeData: [],
       prevPath: "/",
       currentPath: "/",
       dataSource: [],
@@ -246,8 +250,8 @@ export default {
         },
         {
           title: "文件大小",
-          dataIndex: "size",
-          key: "size",
+          dataIndex: "length",
+          key: "length",
           width: 100,
         },
         {
@@ -268,6 +272,8 @@ export default {
 
   mounted() {
     this.getData();
+    this.getTreeData();
+    this.folderSort();
   },
   methods: {
     arrayBufferToBase64(buffer) {
@@ -281,12 +287,18 @@ export default {
     },
     getData() {
       this.toName = "";
-      this.getTreeData();
-      readDir(this.currentPath).then((response) => {
+      let option = {};
+      let path = JSON.parse(JSON.stringify(this.currentPath));
+      if (this.currentPath == "文档") {
+        path = "";
+        option = { dir: BaseDirectory.Document };
+      }
+      readDir(path, option).then((response) => {
         let folder_list = [
           {
             name: { name: "..", kind: "folder", path: ".." },
-            is_directory: "文件夹",
+            length: "",
+            is_directory: "",
           },
         ];
         response.forEach((elem) => {
@@ -295,17 +307,46 @@ export default {
           temp.name.name = elem.name;
           temp.name.kind = "file";
           temp.name.path = elem.path.replaceAll("\\", "/");
+          temp.length = "";
           temp.is_directory = "文件";
           if (elem.children != undefined) {
             temp.name.kind = "folder";
             temp.is_directory = "文件夹";
           }
+          //  else {
+          //   readBinaryFile(elem.path.replaceAll("\\", "/")).then((response) => {
+          //     temp.length = response.length;
+          //   }).catch((err) => {
+          //     console.log(err)
+          //   })
+          // }
           folder_list.push(temp);
         });
         this.dataSource = folder_list;
       });
     },
-
+    folderSort() {
+      let folder_list = this.dataSource
+      for (var i = 0; i < folder_list.length - 1; i++) {
+        for (var j = 0; j < folder_list.length - i - 1; j++) {
+          if (folder_list[j].is_directory == "文件") {
+            var temp = folder_list[j]
+            folder_list[j] = folder_list[j + 1]
+            folder_list[j + 1] = temp
+          }
+        }
+      }
+      this.dataSource = folder_list;
+    },
+    customHeaderRow() {
+      return {
+        onClick: (event) => {
+          if (event.target.innerText == '文件名') {
+            this.folderSort();
+          }
+        },
+      };
+    },
     customRow(record) {
       return {
         align: "left",
@@ -367,34 +408,47 @@ export default {
       let folder_list = {};
       folder_list.key = "0";
       folder_list.title = "/";
+      folder_list.path = "/";
       folder_list.children = new Array(5);
       folder_list.children.push({
         title: "文档",
         key: "0-0",
+        path: "文档",
       });
       dir.forEach((elem_dir, index) => {
         let temp = [];
-        readDir(elem_dir)
-          .then((response) => {
-            for (let i = 1; i < response.length; i++) {
-              temp.push({
-                title: response[i].name,
-                key: folder_list.key + "-" + (index + 1) + "-" + i,
+        async function f() {
+          await readDir(elem_dir)
+            .then((response) => {
+              for (let i = 0; i < response.length; i++) {
+                if (response[i].children != undefined) {
+                  temp.push({
+                    title: response[i].name,
+                    key: folder_list.key + "-" + (index + 1) + "-" + i,
+                    path: response[i].path,
+                    children: [{
+                      title: "",
+                      path: "",
+                      key: folder_list.key + "-" + (index + 1) + "-" + i + "-0",
+                    }]
+                  });
+                }
+              }
+              folder_list.children.push({
+                title: elem_dir,
+                path: elem_dir,
+                key: folder_list.key + "-" + (index + 1),
+                children: temp,
               });
-            }
-          })
-          .catch((err) => {
-            console.log(err);
-          });
-        folder_list.children.push({
-          title: elem_dir,
-          key: folder_list.key + "-" + (index + 1),
-          children: temp,
-        });
+            })
+            .catch((err) => {
+              console.log(err)
+            });
+        }
+        f().then(() => {
+          this.treeData = [folder_list];
+        })
       });
-      setTimeout(() => {
-        this.treeData = [folder_list];
-      }, 1);
     },
     handleOk() {
       let path = "";
@@ -421,9 +475,41 @@ export default {
       }
       this.visible = false;
     },
+    changeLocal(key, event) {
+      this.currentPath = event.node.dataRef.path;
+      this.getData();
+    },
+    searchTree(elem) {
+      if (elem.path != "/") {
+        let temp = [];
+        readDir(elem.path).then((response) => {
+          for (let i = 0; i < 1; i++) {
+            temp.push({
+              title: response[i].name,
+              key: elem.key + "-" + i,
+              path: response[i].path.replaceAll("\\", "/"),
+              children: [{
+                title: "",
+                path: "",
+                key: elem.key + "-" + i + "-0",
+              }]
+            });
+          }
+        })
+        console.log(elem)
+        elem.dataRef.children = temp;
+        elem.loading = true
+        elem.expanded = true
+      }
+    }
   },
 
-  setup() {},
+  setup() {
+    let treeData = ref([]);
+    return {
+      treeData
+    }
+  },
 };
 </script>
 
@@ -433,21 +519,26 @@ export default {
   font-size: 10px !important;
 }
 
-.ant-table-thead > tr > th,
-.ant-table-tbody > tr > td,
-.ant-table tfoot > tr > th,
-.ant-table tfoot > tr > td {
+.ant-table-thead>tr>th,
+.ant-table-tbody>tr>td,
+.ant-table tfoot>tr>th,
+.ant-table tfoot>tr>td {
   padding: 2px 5px !important;
 }
 
-.ant-table-container table > thead > tr:first-child th {
+.ant-table-container table>thead>tr:first-child th {
   font-weight: bolder;
 }
 
 .selected {
   background-color: #1890ff;
 }
+
 .ant-table-cell-row-hover {
   background-color: white !important;
+}
+
+.localTable .ant-table-content {
+  min-height: 290px !important;
 }
 </style>
