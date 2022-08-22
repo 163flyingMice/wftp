@@ -1,16 +1,18 @@
 use quick_xml::events::Event;
 use quick_xml::Reader;
+use serde::{Deserialize, Serialize};
 use std::{
     fs::OpenOptions,
     io::{BufReader, Read},
 };
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct WftpServer {
     pub host: String,
     pub port: String,
     pub user: String,
     pub pass: String,
+    pub name: String,
 }
 
 impl WftpServer {
@@ -20,10 +22,13 @@ impl WftpServer {
             port: String::from(""),
             user: String::from(""),
             pass: String::from(""),
+            name: String::from(""),
         }
     }
 }
-pub fn init() {
+
+#[tauri::command]
+pub fn get_wftp_server() -> Option<Vec<WftpServer>> {
     match OpenOptions::new()
         .write(true)
         .create(true)
@@ -72,12 +77,18 @@ pub fn init() {
                 } else {
                     break;
                 }
+                if let Some(t) = iter.next() {
+                    wftp_server.name = t;
+                } else {
+                    break;
+                }
                 wftp_server_vec.push(wftp_server);
             }
-            println!("{:?}", wftp_server_vec);
+            Some(wftp_server_vec)
         }
         Err(err) => {
             println!("{}", err);
+            None
         }
     }
 }

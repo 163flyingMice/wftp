@@ -60,6 +60,7 @@ impl FileList {
 #[tauri::command]
 pub fn alive() -> String {
     unsafe {
+        let _ = OWNER_FTP_STREAM.as_mut().unwrap().noop();
         if let Some(_) = OWNER_FTP_STREAM.as_mut() {
             String::from("已连接")
         } else {

@@ -9,6 +9,7 @@ export default createStore({
     state: {
         stateList: [],
         connected: false,
+        wftpServer: [],
         localSiteComponent: true,
         remoteSiteComponent: true,
         stateListComponent: true,

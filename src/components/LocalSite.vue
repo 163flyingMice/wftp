@@ -479,28 +479,27 @@ export default {
       this.currentPath = event.node.dataRef.path;
       this.getData();
     },
-    searchTree(elem) {
-      if (elem.path != "/") {
-        let temp = [];
-        readDir(elem.path).then((response) => {
-          for (let i = 0; i < 1; i++) {
-            temp.push({
-              title: response[i].name,
-              key: elem.key + "-" + i,
-              path: response[i].path.replaceAll("\\", "/"),
-              children: [{
-                title: "",
-                path: "",
-                key: elem.key + "-" + i + "-0",
-              }]
-            });
-          }
-        })
-        console.log(elem)
-        elem.dataRef.children = temp;
-        elem.loading = true
-        elem.expanded = true
-      }
+    searchTree() {
+      // if (elem.path != "/") {
+      //   let temp = [];
+      //   readDir(elem.path).then((response) => {
+      //     for (let i = 0; i < 1; i++) {
+      //       temp.push({
+      //         title: response[i].name,
+      //         key: elem.key + "-" + i,
+      //         path: response[i].path.replaceAll("\\", "/"),
+      //         children: [{
+      //           title: "",
+      //           path: "",
+      //           key: elem.key + "-" + i + "-0",
+      //         }]
+      //       });
+      //     }
+      //   })
+      //   elem.dataRef.children = temp;
+      //   elem.loading = true
+      //   elem.expanded = true
+      // }
     }
   },
 

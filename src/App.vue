@@ -3,7 +3,7 @@
     <menu-bar />
   </a-row>
   <a-row>
-    <action-button />
+    <action-button :changeModelVisible="changeModelVisible" />
   </a-row>
   <a-row>
     <input-row />
@@ -27,6 +27,101 @@
     </a-col>
   </a-row>
   <a-row> </a-row>
+  <a-modal
+    :visible="modelVisible"
+    title="站点管理器"
+    centered
+    width="800px"
+    cancelText="取消"
+    okText="确定"
+    @cancel="modelVisible = false"
+    @ok="modelVisible = false"
+  >
+    <a-layout>
+      <a-layout-sider theme="light" width="350px" style="margin-right: 6px">
+        <a-row style="height: 300px">
+          <a-tree
+            v-model:selectedKeys="selectedKeys"
+            :tree-data="treeData"
+            show-icon
+            show-line
+          >
+          </a-tree>
+        </a-row>
+        <a-row style="margin-top: 5px" class="button">
+          <a-col :span="24" align="middle">
+            <a-button type="default">新站点</a-button>
+            <a-button type="default">新文件夹</a-button>
+          </a-col>
+        </a-row>
+        <a-row style="margin-top: 5px" class="button">
+          <a-col :span="24" align="middle">
+            <a-button type="default">新键书签</a-button>
+            <a-button type="default">重命名</a-button>
+          </a-col>
+        </a-row>
+        <a-row style="margin-top: 5px" class="button">
+          <a-col :span="24" align="middle">
+            <a-button type="default">删除</a-button>
+            <a-button type="default">复制</a-button>
+          </a-col>
+        </a-row>
+      </a-layout-sider>
+      <a-layout>
+        <a-tabs v-model:activeKey="activeKey" type="card">
+          <a-tab-pane key="1" tab="常规">
+            <a-row>
+              <a-form>
+                <a-form-item label="协议" name="username">
+                  <a-select key="111">
+                    <a-select-option value="111"></a-select-option>
+                  </a-select>
+                </a-form-item>
+                <a-form layout="inline">
+                  <a-form-item label="主机" name="host">
+                    <a-input />
+                  </a-form-item>
+                  <a-form-item label="端口" name="port" style="width: 80px">
+                    <a-input />
+                  </a-form-item>
+                </a-form>
+              </a-form>
+            </a-row>
+            <a-row>
+              <a-form>
+                <a-form-item label="登录类型" name="type">
+                  <a-select>
+                    <a-select-option value="正常">正常</a-select-option>
+                  </a-select>
+                </a-form-item>
+                <a-form-item label="用户" name="user">
+                  <a-input />
+                </a-form-item>
+                <a-form-item label="密码" name="password">
+                  <a-input-password />
+                </a-form-item>
+              </a-form>
+            </a-row>
+            <a-row>
+              <a-form>
+                <a-form-item label="背景颜色" name="color" style="width: 120px">
+                  <a-select>
+                    <a-select-option value="111"></a-select-option>
+                  </a-select>
+                </a-form-item>
+                <a-form-item label="注释" name="remark" style="width: 350px">
+                  <a-textarea placeholder="" :auto-size="{ minRows: 5, maxRows: 10 }" />
+                </a-form-item>
+              </a-form>
+            </a-row>
+          </a-tab-pane>
+          <a-tab-pane key="2" tab="高级"></a-tab-pane>
+          <a-tab-pane key="3" tab="传输设置"></a-tab-pane>
+          <a-tab-pane key="4" tab="字符集"></a-tab-pane>
+        </a-tabs>
+      </a-layout>
+    </a-layout>
+  </a-modal>
 </template>
 
 <script>
@@ -39,9 +134,13 @@ import InputRow from "./components/InputRow.vue";
 import TransfeList from "./components/TransfeList.vue";
 import MenuBar from "./components/MenuBar.vue";
 import { invoke } from "@tauri-apps/api";
-invoke("alive", {
-}).then((response) => {
-  console.log(response)
+setInterval(() => {
+  invoke("alive", {}).then((response) => {
+    console.log(response);
+  });
+}, 10000);
+invoke("get_wftp_server", {}).then((response) => {
+  store.state.wftpServer = response;
 });
 invoke("connect", {
   addr: "127.0.0.1:21",
@@ -65,22 +164,51 @@ export default {
     InputRow,
     ActionButton,
   },
+  methods: {
+    changeModelVisible() {
+      this.modelVisible = !this.modelVisible;
+    },
+  },
   computed: {
     localSiteState() {
-      return store.state.localSiteComponent
+      return store.state.localSiteComponent;
     },
     stateListState() {
-      return store.state.stateListComponent
+      return store.state.stateListComponent;
     },
     remoteSiteState() {
-      return store.state.remoteSiteComponent
+      return store.state.remoteSiteComponent;
     },
-  }
+  },
+  data() {
+    return {
+      modelVisible: false,
+      treeData: [
+        {
+          title: "我的站点",
+          key: "0-0",
+          children: [
+            {
+              title: "leaf",
+              key: "0-0-0",
+            },
+            {
+              title: "leaf",
+              key: "0-0-1",
+            },
+          ],
+        },
+      ],
+    };
+  },
 };
 </script>
 
 <style>
-.ant-row {
+.ant-form-item {
+  margin-bottom: 0px !important;
+}
+.ant-row:not(.button) {
   padding: 4px 0px 4px 1px !important;
   border: 2px solid silver;
 }
@@ -138,7 +266,7 @@ export default {
   background: #107bcb;
 }
 
-#components-layout-demo-basic>.code-box-demo>.ant-layout+.ant-layout {
+#components-layout-demo-basic > .code-box-demo > .ant-layout + .ant-layout {
   margin-top: 48px;
 }
 </style>
