@@ -52,3 +52,8 @@ npm run tauri:build
 - [ ] 暂无
 ### Storj协议支持  
 - [ ] 暂无
+
+
+## ScreenShot
+
+ ![图片](./screenshot/main.png)
