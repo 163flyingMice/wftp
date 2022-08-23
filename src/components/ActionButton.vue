@@ -17,7 +17,7 @@
           :key="index"
           @click="connect"
         >
-          {{ placement.name }}
+          {{ placement.Name }}
         </a-menu-item>
       </a-menu>
     </template>

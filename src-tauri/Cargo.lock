@@ -1974,6 +1974,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9279fbdacaad3baf559d8cabe0acc3d06e30ea14931af31af79578ac0946decc"
 dependencies = [
  "memchr 2.5.0",
+ "serde",
 ]
 
 [[package]]

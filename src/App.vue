@@ -72,13 +72,19 @@
         <a-row style="margin-top: 5px" class="button">
           <a-col :span="24" align="middle">
             <a-button type="default">新键书签</a-button>
-            <a-button type="default" @click="rename">重命名</a-button>
+            <a-button type="default" @click="rename" :disabled="selected == ''"
+              >重命名</a-button
+            >
           </a-col>
         </a-row>
         <a-row style="margin-top: 5px" class="button">
           <a-col :span="24" align="middle">
-            <a-button type="default">删除</a-button>
-            <a-button type="default">复制</a-button>
+            <a-button type="default" @click="del" :disabled="selected == ''"
+              >删除</a-button
+            >
+            <a-button type="default" @click="copy" :disabled="selected == ''"
+              >复制</a-button
+            >
           </a-col>
         </a-row>
       </a-layout-sider>
@@ -198,14 +204,14 @@ export default {
       temp.writable = false;
       response.map((elem, index) => {
         temp.children.push({
-          title: elem.name,
+          title: elem.Name,
           key: temp.key + "-" + index,
-          host: elem.host,
-          user: elem.user,
-          pass: elem.pass,
-          port: elem.port,
-          protocol: elem.protocol,
-          loginType: elem.logintype,
+          host: elem.Host,
+          user: elem.User,
+          pass: elem.Pass,
+          port: elem.Port,
+          protocol: elem.Protocol,
+          loginType: elem.LogonType,
           editable: false,
           writable: false,
         });
@@ -248,6 +254,7 @@ export default {
         loginType: "1",
       });
     },
+    del() {},
   },
   computed: {
     localSiteState() {
