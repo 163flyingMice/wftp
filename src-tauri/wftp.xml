@@ -17,6 +17,8 @@
 			<Name>
 			centos
 			</Name>
+			<Protocol>1</Protocol>
+			<LogonType>1</LogonType>
 		</Server>
 		<Server>
 			<Host>
@@ -32,8 +34,10 @@
 				am01MjAxMzE0
 			</Pass>
 			<Name>
-			centos
+			centos1
 			</Name>
+			<Protocol>1</Protocol>
+			<LogonType>1</LogonType>
 		</Server>
 	</Servers>
 </wftp>

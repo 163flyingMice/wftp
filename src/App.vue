@@ -41,23 +41,38 @@
       <a-layout-sider theme="light" width="350px" style="margin-right: 6px">
         <a-row style="height: 300px">
           <a-tree
-            v-model:selectedKeys="selectedKeys"
             :tree-data="treeData"
-            show-icon
-            show-line
+            :show-icon="true"
+            @select="selectLeaf"
+            :defaultExpandAll="true"
           >
-          </a-tree>
+            <template #title="dataRef">
+              <template v-if="!dataRef.editable && !dataRef.writable">
+                {{ dataRef.title }}
+              </template>
+              <template v-else>
+                <div>
+                  <a-input
+                    v-model:value="title"
+                    size="small"
+                    @pressEnter="handleEnter(dataRef)"
+                  />
+                </div>
+              </template>
+            </template>
+            <template #switcherIcon> <PlusSquareOutlined /> </template
+          ></a-tree>
         </a-row>
         <a-row style="margin-top: 5px" class="button">
           <a-col :span="24" align="middle">
-            <a-button type="default">新站点</a-button>
+            <a-button type="default" @click="newLeaf">新站点</a-button>
             <a-button type="default">新文件夹</a-button>
           </a-col>
         </a-row>
         <a-row style="margin-top: 5px" class="button">
           <a-col :span="24" align="middle">
             <a-button type="default">新键书签</a-button>
-            <a-button type="default">重命名</a-button>
+            <a-button type="default" @click="rename">重命名</a-button>
           </a-col>
         </a-row>
         <a-row style="margin-top: 5px" class="button">
@@ -72,17 +87,22 @@
           <a-tab-pane key="1" tab="常规">
             <a-row>
               <a-form>
-                <a-form-item label="协议" name="username">
-                  <a-select key="111">
-                    <a-select-option value="111"></a-select-option>
+                <a-form-item label="协议" name="protocol">
+                  <a-select :value="protocol">
+                    <a-select-option
+                      :value="elem"
+                      v-for="(elem, index) in protocols"
+                      :key="index"
+                      >{{ elem }}</a-select-option
+                    >
                   </a-select>
                 </a-form-item>
                 <a-form layout="inline">
                   <a-form-item label="主机" name="host">
-                    <a-input />
+                    <a-input :value="host" />
                   </a-form-item>
                   <a-form-item label="端口" name="port" style="width: 80px">
-                    <a-input />
+                    <a-input :value="port" />
                   </a-form-item>
                 </a-form>
               </a-form>
@@ -90,15 +110,20 @@
             <a-row>
               <a-form>
                 <a-form-item label="登录类型" name="type">
-                  <a-select>
-                    <a-select-option value="正常">正常</a-select-option>
+                  <a-select :value="loginType">
+                    <a-select-option
+                      :value="elem"
+                      v-for="(elem, index) in loginTypes"
+                      :key="index"
+                      >{{ elem }}</a-select-option
+                    >
                   </a-select>
                 </a-form-item>
                 <a-form-item label="用户" name="user">
-                  <a-input />
+                  <a-input :value="user" />
                 </a-form-item>
                 <a-form-item label="密码" name="password">
-                  <a-input-password />
+                  <a-input-password :value="pass" />
                 </a-form-item>
               </a-form>
             </a-row>
@@ -134,14 +159,12 @@ import InputRow from "./components/InputRow.vue";
 import TransfeList from "./components/TransfeList.vue";
 import MenuBar from "./components/MenuBar.vue";
 import { invoke } from "@tauri-apps/api";
+import { PlusSquareOutlined } from "@ant-design/icons-vue";
 setInterval(() => {
   invoke("alive", {}).then((response) => {
     console.log(response);
   });
 }, 10000);
-invoke("get_wftp_server", {}).then((response) => {
-  store.state.wftpServer = response;
-});
 invoke("connect", {
   addr: "127.0.0.1:21",
   username: "root",
@@ -156,6 +179,7 @@ invoke("connect", {
 export default {
   name: "App",
   components: {
+    PlusSquareOutlined,
     StateList,
     MenuBar,
     TransfeList,
@@ -164,9 +188,65 @@ export default {
     InputRow,
     ActionButton,
   },
+  mounted() {
+    invoke("get_wftp_server", {}).then((response) => {
+      let temp = {};
+      temp.title = "我的站点";
+      temp.key = "0";
+      temp.children = [];
+      temp.editable = false;
+      temp.writable = false;
+      response.map((elem, index) => {
+        temp.children.push({
+          title: elem.name,
+          key: temp.key + "-" + index,
+          host: elem.host,
+          user: elem.user,
+          pass: elem.pass,
+          port: elem.port,
+          protocol: elem.protocol,
+          loginType: elem.logintype,
+          editable: false,
+          writable: false,
+        });
+      });
+      this.treeData = [temp];
+      store.state.wftpServer = response;
+    });
+  },
   methods: {
     changeModelVisible() {
       this.modelVisible = !this.modelVisible;
+    },
+    selectLeaf(key, elem) {
+      this.selected = elem.node.dataRef;
+      this.host = elem.node.host;
+      this.port = elem.node.port;
+      this.user = elem.node.user;
+      this.pass = elem.node.pass;
+      this.protocol = this.protocols[elem.node.protocol];
+      this.loginType = this.loginTypes[elem.node.loginType];
+    },
+    rename() {
+      this.title = this.selected.title;
+      this.selected.editable = true;
+    },
+    handleEnter() {
+      this.selected.title = this.title;
+      this.selected.editable = false;
+      this.selected.writable = false;
+      this.selected = "";
+    },
+    newLeaf() {
+      this.title = "新站点";
+      this.treeData[0].children.push({
+        key: "0-" + this.treeData[0].children.length,
+        title: "新站点",
+        editable: false,
+        writable: true,
+        protocol: "1",
+        loginType: "1",
+      });
     },
   },
   computed: {
@@ -179,28 +259,28 @@ export default {
     remoteSiteState() {
       return store.state.remoteSiteComponent;
     },
+    wftpServer() {
+      return store.state.wftpServer;
+    },
   },
   data() {
     return {
+      title: "",
+      selected: "",
+      protocol: "FTP - 文件传输协议",
+      protocols: ["SFTP - SSH FILE Transfer Protocol", "FTP - 文件传输协议"],
+      loginType: "正常",
+      loginTypes: ["询问", "正常"],
+      activeKey: "1",
       modelVisible: false,
-      treeData: [
-        {
-          title: "我的站点",
-          key: "0-0",
-          children: [
-            {
-              title: "leaf",
-              key: "0-0-0",
-            },
-            {
-              title: "leaf",
-              key: "0-0-1",
-            },
-          ],
-        },
-      ],
+      host: "",
+      user: "",
+      port: "",
+      pass: "",
+      treeData: [],
     };
   },
+  setup() {},
 };
 </script>
 

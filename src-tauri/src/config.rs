@@ -13,6 +13,8 @@ pub struct WftpServer {
     pub user: String,
     pub pass: String,
     pub name: String,
+    pub protocol: String,
+    pub logintype: String,
 }
 
 impl WftpServer {
@@ -23,6 +25,8 @@ impl WftpServer {
             user: String::from(""),
             pass: String::from(""),
             name: String::from(""),
+            protocol: String::from(""),
+            logintype: String::from(""),
         }
     }
 }
@@ -79,6 +83,16 @@ pub fn get_wftp_server() -> Option<Vec<WftpServer>> {
                 }
                 if let Some(t) = iter.next() {
                     wftp_server.name = t;
+                } else {
+                    break;
+                }
+                if let Some(t) = iter.next() {
+                    wftp_server.protocol = t;
+                } else {
+                    break;
+                }
+                if let Some(t) = iter.next() {
+                    wftp_server.logintype = t;
                 } else {
                     break;
                 }
