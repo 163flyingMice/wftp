@@ -2,7 +2,7 @@
 <wftp platform="windows" version="1.0">
 	<Servers>
 		<Server>
-			<Host>120.76.76.154</Host>
+			<Host>127.0.0.1</Host>
 			<Port>65521</Port>
 			<User>zhangwenhao</User>
 			<Pass>am01MjAxMzE0</Pass>
@@ -11,7 +11,7 @@
 			<LogonType>1</LogonType>
 		</Server>
 		<Server>
-			<Host>120.76.76.154</Host>
+			<Host>127.0.0.1</Host>
 			<Port>65521</Port>
 			<User>zhangwenhao</User>
 			<Pass>am01MjAxMzE0</Pass>

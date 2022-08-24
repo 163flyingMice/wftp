@@ -7,7 +7,7 @@ pub mod config;
 pub mod local;
 pub mod operate;
 use config::{get_default_wftp, get_wftp_server, wftp_xml_string};
-use local::get_file_size;
+use local::{get_file_modified, get_file_size};
 use operate::{
     alive, connect, cwd, folder_list, list, mk_dir, mk_file, prev, pwd, remove_dir, remove_file,
     rename_file, try_connect, upload,
@@ -34,6 +34,7 @@ fn main() {
             get_default_wftp,
             wftp_xml_string,
             get_file_size,
+            get_file_modified,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

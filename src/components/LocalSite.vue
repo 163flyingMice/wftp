@@ -326,6 +326,7 @@ export default {
             name: { name: "..", kind: "folder", path: ".." },
             length: "",
             is_directory: "",
+            update_at: "",
           },
         ];
         response.forEach((elem) => {
@@ -335,6 +336,7 @@ export default {
           temp.name.kind = "file";
           temp.name.path = elem.path.replaceAll("\\", "/");
           temp.length = "";
+          temp.update_at = "";
           temp.is_directory = "文件";
           if (elem.children != undefined) {
             temp.name.kind = "folder";
@@ -346,6 +348,11 @@ export default {
               }
             );
           }
+          invoke("get_file_modified", { path: elem.path.replaceAll("\\", "/") }).then(
+            (response) => {
+              temp.update_at = response;
+            }
+          );
           folder_list.push(temp);
         });
         this.dataSource = folder_list;
@@ -353,15 +360,16 @@ export default {
     },
     folderSort() {
       let folder_list = this.dataSource;
-      for (var i = 0; i < folder_list.length - 1; i++) {
-        for (var j = 0; j < folder_list.length - i - 1; j++) {
-          if (folder_list[j].is_directory == "文件") {
-            var temp = folder_list[j];
-            folder_list[j] = folder_list[j + 1];
-            folder_list[j + 1] = temp;
-          }
-        }
-      }
+      folder_list.sort(function (a, b) {
+        return a.is_directory.length - b.is_directory.length;
+      });
+      this.dataSource = folder_list;
+    },
+    fileSizeSort() {
+      let folder_list = this.dataSource;
+      folder_list.sort(function (a, b) {
+        return a.length - b.length;
+      });
       this.dataSource = folder_list;
     },
     customHeaderRow() {
@@ -369,6 +377,8 @@ export default {
         onClick: (event) => {
           if (event.target.innerText == "文件名") {
             this.folderSort();
+          } else if (event.target.innerText == "文件大小") {
+            this.fileSizeSort();
           }
         },
       };
