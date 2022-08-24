@@ -59,24 +59,16 @@ pub struct WftpServer {
     pub logintype: LogonType,
 }
 
+const XML_HEADER: &str = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
+
 #[tauri::command]
-pub fn get_wftp_server() -> Option<Vec<WftpServer>> {
-    match OpenOptions::new()
-        .write(true)
-        .create(true)
-        .read(true)
-        .open("wftp.xml")
-    {
+pub fn get_default_wftp() -> Option<String> {
+    match OpenOptions::new().read(true).open("wftp.xml") {
         Ok(file) => {
             let mut buf_reader = BufReader::new(file);
             let mut contents = String::new();
             let _ = buf_reader.read_to_string(&mut contents);
-            let wftp: Wftp = from_str(&contents).unwrap();
-            let mut server = Vec::new();
-            for elem in wftp.servers.server.into_iter() {
-                server.push(elem);
-            }
-            Some(server)
+            Some(contents)
         }
         Err(err) => {
             println!("{}", err);
@@ -85,62 +77,27 @@ pub fn get_wftp_server() -> Option<Vec<WftpServer>> {
     }
 }
 
-pub fn insert_wftp_server() {
-    let xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
-    <wftp version=\"1.0\" platform=\"windows\">
-        <Servers>
-            <Server>
-                <Host>
-                    120.76.76.154
-                </Host>
-                <Port>
-                    65521
-                </Port>
-                <User>
-                    zhangwenhao
-                </User>
-                <Pass>
-                    am01MjAxMzE0
-                </Pass>
-                <Name>
-                centos
-                </Name>
-                <Protocol>1</Protocol>
-                <LogonType>1</LogonType>
-            </Server>
-            <Server>
-                <Host>
-                    120.76.76.154
-                </Host>
-                <Port>
-                    65521
-                </Port>
-                <User>
-                    zhangwenhao
-                </User>
-                <Pass>
-                    am01MjAxMzE0
-                </Pass>
-                <Name>
-                centos1
-                </Name>
-                <Protocol>1</Protocol>
-                <LogonType>1</LogonType>
-            </Server>
-        </Servers>
-    </wftp>
-    ";
-    let mut wftp: Wftp = from_str(&xml).unwrap();
-    for mut elem in wftp.servers.server.iter_mut() {
-        elem.name = Name(String::from("111"));
-        println!("{:?}", elem);
+#[tauri::command]
+pub fn get_wftp_server(wftp_xml: String) -> Option<Vec<WftpServer>> {
+    let wftp: Wftp = from_str(&wftp_xml).unwrap();
+    let mut server = Vec::new();
+    for elem in wftp.servers.server.into_iter() {
+        server.push(elem);
     }
-    let mut buffer = Vec::new();
+    Some(server)
+}
 
-    {
-        let mut ser = Serializer::new(&mut buffer);
-        wftp.serialize(&mut ser).unwrap();
-    }
-    let got = String::from_utf8(buffer).unwrap();
-    println!("{}", got);
+#[tauri::command]
+pub fn wftp_xml_string(xml_string: String) -> String {
+    let servers: Vec<WftpServer> = serde_json::from_str(&xml_string).unwrap();
+    let wftp_server = Wftp {
+        servers: Servers { server: servers },
+        platform: String::from("windows"),
+        version: String::from("1.0"),
+    };
+    let mut buffer = Vec::new();
+    let mut ser = Serializer::new(&mut buffer);
+    let _ = wftp_server.serialize(&mut ser).unwrap();
+    let wftp_xml = XML_HEADER.to_string() + &(String::from_utf8(buffer).unwrap());
+    wftp_xml
 }

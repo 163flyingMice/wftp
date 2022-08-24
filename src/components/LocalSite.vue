@@ -9,11 +9,17 @@
     <a-col style="min-width: 100px !important; width: 100%">
       <div>
         <a-input :value="currentPath" addon-before="本地站点：" />
-        <a-tree style="
+        <a-tree
+          style="
             overflow-y: auto;
             max-height: 100px !important;
-            min-height: 100px !important;" :show-icon="true" :tree-data="treeData" @select="changeLocal"
-          :defaultExpandAll="true">
+            min-height: 100px !important;
+          "
+          :show-icon="true"
+          :tree-data="treeData"
+          @select="changeLocal"
+          :defaultExpandAll="true"
+        >
           <template #title="dataRef">
             {{ dataRef.title }}
           </template>
@@ -26,17 +32,36 @@
   </a-row>
   <a-row style="min-height: 300px; max-height: 300px; overflow: auto">
     <a-col>
-      <a-table class="localTable" v-mouse-menu="options" :columns="columns" :data-source="dataSource"
-        :pagination="false" :customRow="customRow" :scroll="{ x: 600 }" style="" :customHeaderRow="customHeaderRow">
+      <a-table
+        class="localTable"
+        v-mouse-menu="options"
+        :columns="columns"
+        :data-source="dataSource"
+        :pagination="false"
+        :customRow="customRow"
+        :scroll="{ x: 600 }"
+        style=""
+        :customHeaderRow="customHeaderRow"
+      >
         <template #bodyCell="{ column, text }">
           <template v-if="column.dataIndex === 'name'">
-            <folder-open-outlined :style="{ color: '#ffe896' }" v-if="text.kind === 'folder'" />
+            <folder-open-outlined
+              :style="{ color: '#ffe896' }"
+              v-if="text.kind === 'folder'"
+            />
             <file-outlined v-else />
-            <a-input class="showInput" v-if="text.showInput" v-model:value="toName" :bordered="false" placeholder=""
-              @pressEnter.prevent="renameInput" @focus.prevent="handleFocus"
-              style="display: inline-block; width: 80px" />
+            <a-input
+              class="showInput"
+              v-if="text.showInput"
+              v-model:value="toName"
+              :bordered="false"
+              placeholder=""
+              @pressEnter.prevent="renameInput"
+              @focus.prevent="handleFocus"
+              style="display: inline-block; width: 80px"
+            />
             <text v-else :title="text.name">{{
-                text.name.length > 20 ? text.name.slice(0, 20) + "..." : text.name
+              text.name.length > 20 ? text.name.slice(0, 20) + "..." : text.name
             }}</text>
           </template>
         </template>
@@ -68,6 +93,7 @@ import { invoke } from "@tauri-apps/api/tauri";
 import store from "@/store";
 export default {
   props: {
+    refreshRemote: Function,
     state: Boolean,
   },
   directives: {
@@ -116,6 +142,7 @@ export default {
                         content: this.arrayBufferToBase64(response),
                       })
                         .then((response) => {
+                          this.refreshRemote();
                           console.log(response);
                         })
                         .catch((err) => {
@@ -130,9 +157,9 @@ export default {
             },
             disabled: () => {
               if (store.state.connected) {
-                return false
+                return false;
               }
-              return true
+              return true;
             },
           },
           {
@@ -141,9 +168,9 @@ export default {
             fn: (...args) => console.log("add", args),
             disabled: () => {
               if (store.state.connected) {
-                return false
+                return false;
               }
-              return true
+              return true;
             },
           },
           {
@@ -156,9 +183,9 @@ export default {
             disabled: () => {
               switch (this.selected.kind) {
                 case "folder":
-                  return false
+                  return false;
                 default:
-                  return true
+                  return true;
               }
             },
           },
@@ -312,27 +339,26 @@ export default {
           if (elem.children != undefined) {
             temp.name.kind = "folder";
             temp.is_directory = "文件夹";
+          } else {
+            invoke("get_file_size", { path: elem.path.replaceAll("\\", "/") }).then(
+              (response) => {
+                temp.length = response;
+              }
+            );
           }
-          //  else {
-          //   readBinaryFile(elem.path.replaceAll("\\", "/")).then((response) => {
-          //     temp.length = response.length;
-          //   }).catch((err) => {
-          //     console.log(err)
-          //   })
-          // }
           folder_list.push(temp);
         });
         this.dataSource = folder_list;
       });
     },
     folderSort() {
-      let folder_list = this.dataSource
+      let folder_list = this.dataSource;
       for (var i = 0; i < folder_list.length - 1; i++) {
         for (var j = 0; j < folder_list.length - i - 1; j++) {
           if (folder_list[j].is_directory == "文件") {
-            var temp = folder_list[j]
-            folder_list[j] = folder_list[j + 1]
-            folder_list[j + 1] = temp
+            var temp = folder_list[j];
+            folder_list[j] = folder_list[j + 1];
+            folder_list[j + 1] = temp;
           }
         }
       }
@@ -341,7 +367,7 @@ export default {
     customHeaderRow() {
       return {
         onClick: (event) => {
-          if (event.target.innerText == '文件名') {
+          if (event.target.innerText == "文件名") {
             this.folderSort();
           }
         },
@@ -426,11 +452,13 @@ export default {
                     title: response[i].name,
                     key: folder_list.key + "-" + (index + 1) + "-" + i,
                     path: response[i].path,
-                    children: [{
-                      title: "",
-                      path: "",
-                      key: folder_list.key + "-" + (index + 1) + "-" + i + "-0",
-                    }]
+                    children: [
+                      {
+                        title: "",
+                        path: "",
+                        key: folder_list.key + "-" + (index + 1) + "-" + i + "-0",
+                      },
+                    ],
                   });
                 }
               }
@@ -442,12 +470,12 @@ export default {
               });
             })
             .catch((err) => {
-              console.log(err)
+              console.log(err);
             });
         }
         f().then(() => {
           this.treeData = [folder_list];
-        })
+        });
       });
     },
     handleOk() {
@@ -500,14 +528,14 @@ export default {
       //   elem.loading = true
       //   elem.expanded = true
       // }
-    }
+    },
   },
 
   setup() {
     let treeData = ref([]);
     return {
-      treeData
-    }
+      treeData,
+    };
   },
 };
 </script>
@@ -518,14 +546,14 @@ export default {
   font-size: 10px !important;
 }
 
-.ant-table-thead>tr>th,
-.ant-table-tbody>tr>td,
-.ant-table tfoot>tr>th,
-.ant-table tfoot>tr>td {
+.ant-table-thead > tr > th,
+.ant-table-tbody > tr > td,
+.ant-table tfoot > tr > th,
+.ant-table tfoot > tr > td {
   padding: 2px 5px !important;
 }
 
-.ant-table-container table>thead>tr:first-child th {
+.ant-table-container table > thead > tr:first-child th {
   font-weight: bolder;
 }
 

@@ -15,10 +15,10 @@
   </a-row>
   <a-row>
     <a-col :span="12">
-      <local-site :state="localSiteState" />
+      <local-site :state="localSiteState" :refreshRemote="refreshRemote" />
     </a-col>
     <a-col :span="12">
-      <remote-site :state="remoteSiteState" />
+      <remote-site :state="remoteSiteState" ref="remoteSite" />
     </a-col>
   </a-row>
   <a-row>
@@ -35,7 +35,7 @@
     cancelText="取消"
     okText="确定"
     @cancel="modelVisible = false"
-    @ok="modelVisible = false"
+    @ok="handleOk"
   >
     <a-layout>
       <a-layout-sider theme="light" width="350px" style="margin-right: 6px">
@@ -48,11 +48,12 @@
           >
             <template #title="dataRef">
               <template v-if="!dataRef.editable && !dataRef.writable">
-                {{ dataRef.title }}
+                {{ dataRef.Name }}
               </template>
               <template v-else>
                 <div>
                   <a-input
+                    @focus="handleFocus"
                     v-model:value="title"
                     size="small"
                     @pressEnter="handleEnter(dataRef)"
@@ -94,7 +95,7 @@
             <a-row>
               <a-form>
                 <a-form-item label="协议" name="protocol">
-                  <a-select :value="protocol">
+                  <a-select v-model:value="protocol">
                     <a-select-option
                       :value="elem"
                       v-for="(elem, index) in protocols"
@@ -105,10 +106,10 @@
                 </a-form-item>
                 <a-form layout="inline">
                   <a-form-item label="主机" name="host">
-                    <a-input :value="host" />
+                    <a-input v-model:value="host" />
                   </a-form-item>
-                  <a-form-item label="端口" name="port" style="width: 80px">
-                    <a-input :value="port" />
+                  <a-form-item label="端口" name="port" style="width: 100px">
+                    <a-input v-model:value="port" />
                   </a-form-item>
                 </a-form>
               </a-form>
@@ -116,7 +117,7 @@
             <a-row>
               <a-form>
                 <a-form-item label="登录类型" name="type">
-                  <a-select :value="loginType">
+                  <a-select v-model:value="loginType">
                     <a-select-option
                       :value="elem"
                       v-for="(elem, index) in loginTypes"
@@ -126,10 +127,10 @@
                   </a-select>
                 </a-form-item>
                 <a-form-item label="用户" name="user">
-                  <a-input :value="user" />
+                  <a-input v-model:value="user" />
                 </a-form-item>
                 <a-form-item label="密码" name="password">
-                  <a-input-password :value="pass" />
+                  <a-input-password v-model:value="pass" />
                 </a-form-item>
               </a-form>
             </a-row>
@@ -195,66 +196,118 @@ export default {
     ActionButton,
   },
   mounted() {
-    invoke("get_wftp_server", {}).then((response) => {
-      let temp = {};
-      temp.title = "我的站点";
-      temp.key = "0";
-      temp.children = [];
-      temp.editable = false;
-      temp.writable = false;
-      response.map((elem, index) => {
-        temp.children.push({
-          title: elem.Name,
-          key: temp.key + "-" + index,
-          host: elem.Host,
-          user: elem.User,
-          pass: elem.Pass,
-          port: elem.Port,
-          protocol: elem.Protocol,
-          loginType: elem.LogonType,
-          editable: false,
-          writable: false,
-        });
-      });
-      this.treeData = [temp];
-      store.state.wftpServer = response;
-    });
+    this.getDefaultWftp();
   },
   methods: {
+    getDefaultWftp() {
+      if (!localStorage.getItem("wftp_server")) {
+        invoke("get_default_wftp", {}).then((response) => {
+          localStorage.setItem("wftp_server", response);
+        });
+      }
+    },
     changeModelVisible() {
+      this.getWftpServer();
       this.modelVisible = !this.modelVisible;
     },
     selectLeaf(key, elem) {
+      this.selectedKey = key;
       this.selected = elem.node.dataRef;
-      this.host = elem.node.host;
-      this.port = elem.node.port;
-      this.user = elem.node.user;
-      this.pass = elem.node.pass;
-      this.protocol = this.protocols[elem.node.protocol];
-      this.loginType = this.loginTypes[elem.node.loginType];
+      this.host = elem.node.Host;
+      this.port = elem.node.Port;
+      this.user = elem.node.User;
+      this.pass = elem.node.Pass;
+      this.protocol = this.protocols[elem.node.Protocol];
+      this.loginType = this.loginTypes[elem.node.LogonType];
     },
     rename() {
-      this.title = this.selected.title;
+      this.title = this.selected.Name;
       this.selected.editable = true;
     },
     handleEnter() {
-      this.selected.title = this.title;
+      this.selected.Name = this.title;
       this.selected.editable = false;
       this.selected.writable = false;
       this.selected = "";
+      this.saveXml();
+    },
+    saveXml() {
+      invoke("wftp_xml_string", {
+        xmlString: JSON.stringify(this.treeData[0].children),
+      }).then((response) => {
+        localStorage.setItem("wftp_server", response);
+      });
+    },
+    getWftpServer() {
+      invoke("get_wftp_server", { wftpXml: localStorage.getItem("wftp_server") }).then(
+        (response) => {
+          let temp = {};
+          temp.Name = "我的站点";
+          temp.key = "0";
+          temp.children = [];
+          response.map((elem, index) => {
+            temp.children.push({
+              Name: elem.Name,
+              key: temp.key + "-" + index,
+              Host: elem.Host,
+              User: elem.User,
+              Pass: elem.Pass,
+              Port: elem.Port,
+              Protocol: elem.Protocol,
+              LogonType: elem.LogonType,
+            });
+          });
+          this.treeData = [temp];
+          store.state.wftpServer = response;
+        }
+      );
     },
     newLeaf() {
       this.title = "新站点";
       this.treeData[0].children.push({
         key: "0-" + this.treeData[0].children.length,
-        title: "新站点",
+        Name: "新站点",
         editable: false,
         writable: true,
-        protocol: "1",
-        loginType: "1",
+        Protocol: "1",
+        LogonType: "1",
       });
     },
-    del() {},
+    del() {
+      this.treeData[0].children.map((elem, key) => {
+        if (elem.key == this.selectedKey[0]) {
+          this.treeData[0].children.splice(key, 1);
+        }
+      });
+      this.saveXml();
+    },
+    copy() {
+      this.title = this.selected.Name;
+      this.treeData[0].children.push({
+        key: "0-" + this.treeData[0].children.length,
+        Name: this.selected.Name,
+        editable: false,
+        writable: true,
+        Protocol: "1",
+        LogonType: "1",
+      });
+    },
+    handleFocus(event) {
+      event.target.select();
+    },
+    handleOk() {
+      this.modelVisible = false;
+      this.selected.Host = this.host;
+      this.selected.Port = this.port;
+      this.selected.User = this.user;
+      this.selected.Pass = this.pass;
+      this.selected.Protocol = this.protocol;
+      this.selected.LogonType = this.loginType;
+      this.saveXml();
+    },
+    refreshRemote() {
+      this.$refs.remoteSite.getData();
+    },
   },
   computed: {
     localSiteState() {
@@ -272,6 +325,7 @@ export default {
   },
   data() {
     return {
+      selectedKey: [],
       title: "",
       selected: "",
       protocol: "FTP - 文件传输协议",
