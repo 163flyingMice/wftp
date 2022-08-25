@@ -42,7 +42,7 @@
     </a-tab-pane>
   </a-tabs>
   <a-row>
-    <a-col :span="20">
+    <a-col :span="24">
       <transfe-list />
     </a-col>
   </a-row>
