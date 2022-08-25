@@ -54,7 +54,7 @@
       <PicRightOutlined />
     </template>
   </a-button>
-  <a-button size="small" type="default" :onclick="reloadApp">
+  <a-button size="small" type="default" :onclick="refreshRemote">
     <template #icon>
       <redo-outlined />
     </template>
@@ -72,6 +72,7 @@ import {
 } from "@ant-design/icons-vue";
 export default {
   props: {
+    refreshRemote: Function,
     changeModelVisible: Function,
   },
   components: {
@@ -97,9 +98,6 @@ export default {
     },
   },
   methods: {
-    reloadApp() {
-      window.location.reload();
-    },
     changeLocalSite() {
       store.state.localSiteComponent = !store.state.localSiteComponent;
     },

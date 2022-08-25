@@ -3,7 +3,10 @@
     <menu-bar />
   </a-row>
   <a-row>
-    <action-button :changeModelVisible="changeModelVisible" />
+    <action-button
+      :changeModelVisible="changeModelVisible"
+      :refreshRemote="refreshRemote"
+    />
   </a-row>
   <a-row>
     <input-row />
@@ -13,14 +16,34 @@
       <state-list />
     </a-col>
   </a-row>
-  <a-row>
-    <a-col :span="12">
-      <local-site :state="localSiteState" :refreshRemote="refreshRemote" />
-    </a-col>
-    <a-col :span="12">
-      <remote-site :state="remoteSiteState" ref="remoteSite" />
-    </a-col>
-  </a-row>
+  <a-tabs
+    @change="changeTab"
+    v-model:activeKey="listActiveKey"
+    type="editable-card"
+    :hideAdd="true"
+    @edit="editTab"
+  >
+    <a-tab-pane
+      v-for="pane in panes"
+      :key="pane.key"
+      :tab="pane.title"
+      :closable="pane.closable"
+      ref="tabPane"
+    >
+      <a-row>
+        <a-col :span="12">
+          <local-site :state="localSiteState" :refreshRemote="refreshRemote" />
+        </a-col>
+        <a-col :span="12">
+          <remote-site
+            :state="remoteSiteState"
+            :ref="'remoteSite' + pane.key"
+            :data="pane.data"
+          />
+        </a-col>
+      </a-row>
+    </a-tab-pane>
+  </a-tabs>
   <a-row>
     <a-col :span="20">
       <transfe-list />
@@ -167,21 +190,6 @@ import TransfeList from "./components/TransfeList.vue";
 import MenuBar from "./components/MenuBar.vue";
 import { invoke } from "@tauri-apps/api";
 import { PlusSquareOutlined } from "@ant-design/icons-vue";
-setInterval(() => {
-  invoke("alive", {}).then((response) => {
-    console.log(response);
-  });
-}, 10000);
-invoke("connect", {
-  addr: "127.0.0.1:21",
-  username: "root",
-  password: "root",
-}).then((response) => {
-  if (response == "连接成功！") {
-    store.state.connected = true;
-  }
-  store.state.stateList.push("状态：" + response);
-});
 
 export default {
   name: "App",
@@ -196,6 +204,7 @@ export default {
     ActionButton,
   },
   mounted() {
+    store.state.connectedName = this.panes[0].data.Name;
     this.getDefaultWftp();
   },
   methods: {
@@ -306,7 +315,41 @@ export default {
       this.saveXml();
     },
     refreshRemote() {
-      this.$refs.remoteSite.getData();
+      this.$refs["remoteSite" + this.listActiveKey][0].getData();
+    },
+    removeTab(targetKey) {
+      let lastIndex = 0;
+      this.panes.forEach((pane, i) => {
+        if (pane.key === targetKey) {
+          lastIndex = i - 1;
+        }
+      });
+      this.panes = this.panes.filter((pane) => pane.key !== targetKey);
+
+      if (this.panes.length && this.listActiveKey === targetKey) {
+        if (lastIndex >= 0) {
+          this.listActiveKey = this.panes[lastIndex].key;
+        } else {
+          this.listActiveKey = this.panes[0].key;
+        }
+      }
+    },
+    addTab() {},
+    editTab(targetKey, action) {
+      if (action === "add") {
+        this.addTab();
+      } else {
+        this.removeTab(targetKey);
+      }
+    },
+    changeTab(key) {
+      let selectedPane;
+      this.panes.forEach((pane) => {
+        if (pane.key === key) {
+          selectedPane = pane;
+        }
+      });
+      store.state.connectedName = selectedPane.data.Name;
     },
   },
   computed: {
@@ -338,7 +381,32 @@ export default {
       user: "",
       port: "",
       pass: "",
+      listActiveKey: "1",
       treeData: [],
+      panes: [
+        {
+          title: "我的站点",
+          key: "1",
+          data: {
+            Host: "127.0.0.1",
+            User: "root",
+            Pass: "root",
+            Port: "21",
+            Name: "我的站点",
+          },
+        },
+        {
+          title: "我的站点1",
+          key: "2",
+          data: {
+            Host: "127.0.0.1",
+            User: "root",
+            Pass: "root",
+            Port: "65521",
+            Name: "我的站点1",
+          },
+        },
+      ],
     };
   },
   setup() {},
@@ -409,5 +477,12 @@ export default {
 
 #components-layout-demo-basic > .code-box-demo > .ant-layout + .ant-layout {
   margin-top: 48px;
+}
+
+.ant-tabs-top > .ant-tabs-nav,
+.ant-tabs-bottom > .ant-tabs-nav,
+.ant-tabs-top > div > .ant-tabs-nav,
+.ant-tabs-bottom > div > .ant-tabs-nav {
+  margin: 0 0 6px 0 !important;
 }
 </style>

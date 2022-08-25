@@ -13,6 +13,7 @@ export default createStore({
         localSiteComponent: true,
         remoteSiteComponent: true,
         stateListComponent: true,
+        connectedName: "",
     },
     /**
      * 改变数据方法的集合

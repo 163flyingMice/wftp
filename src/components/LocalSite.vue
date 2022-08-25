@@ -138,6 +138,7 @@ export default {
                   readBinaryFile(this.selected.path)
                     .then((response) => {
                       invoke("upload", {
+                        name: store.state.connectedName,
                         filename: this.selected.name,
                         content: this.arrayBufferToBase64(response),
                       })

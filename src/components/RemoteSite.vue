@@ -85,6 +85,7 @@ import { Modal } from "ant-design-vue";
 export default {
   props: {
     state: Boolean,
+    data: Object,
   },
   directives: {
     MouseMenu: MouseMenuDirective,
@@ -130,6 +131,7 @@ export default {
             tips: "Enter",
             fn: () => {
               invoke("cwd", {
+                name: this.data.Name,
                 path: this.currentPath,
               }).then((response) => {
                 store.state.stateList.push("状态：" + response);
@@ -189,6 +191,7 @@ export default {
                   switch (this.selected.kind) {
                     case "folder":
                       invoke("remove_dir", {
+                        name: this.data.Name,
                         path: this.selected.name,
                       }).then((response) => {
                         store.state.stateList.push("响应：" + response);
@@ -197,6 +200,7 @@ export default {
                       break;
                     default:
                       invoke("remove_file", {
+                        name: this.data.Name,
                         filename: this.selected.name,
                       }).then((response) => {
                         store.state.stateList.push("响应：" + response);
@@ -225,7 +229,9 @@ export default {
             tips: "Copy",
             fn: () => {
               store.state.stateList.push("命令：复制URL");
-              invoke("pwd", {}).then((response) => {
+              invoke("pwd", {
+                name: this.data.Name,
+              }).then((response) => {
                 let text = response + this.selected.name;
                 if (response !== "/") {
                   text = response + "/" + this.selected.name;
@@ -299,8 +305,29 @@ export default {
       ],
     };
   },
-
   mounted() {
+    if (this.data) {
+      let timer;
+      if (timer != undefined) {
+        clearInterval(timer);
+      }
+      timer = setInterval(() => {
+        invoke("alive", { name: this.data.Name }).then((response) => {
+          console.log(response);
+        });
+      }, 10000);
+      invoke("connect", {
+        name: this.data.Name,
+        addr: this.data.Host + ":" + this.data.Port,
+        username: this.data.User,
+        password: this.data.Pass,
+      }).then((response) => {
+        if (response == "连接成功！") {
+          store.state.connected = true;
+        }
+        store.state.stateList.push("状态：" + response);
+      });
+    }
     this.$watch(
       () => {
         return store.state.connected;
@@ -312,6 +339,7 @@ export default {
       }
     );
   },
+  watch: {},
   methods: {
     getData() {
       this.getTreeData();
@@ -319,6 +347,7 @@ export default {
         .querySelectorAll("tr")
         .forEach((elem) => elem.classList.remove("selected"));
       invoke("list", {
+        name: this.data.Name,
         path: this.currentPath,
       }).then((response) => {
         store.state.stateList.push("状态：列出“" + this.currentPath + "”的目录成功");
@@ -335,13 +364,16 @@ export default {
           if (record.name.name != "..") {
             this.currentPath = record.name.name;
             invoke("cwd", {
+              name: this.data.Name,
               path: this.currentPath,
             }).then((response) => {
               store.state.stateList.push("状态：" + response);
             });
           } else {
             this.currentPath = this.prevPath;
-            invoke("prev").then((response) => {
+            invoke("prev", {
+              name: this.data.Name,
+            }).then((response) => {
               store.state.stateList.push("状态：" + response);
             });
           }
@@ -370,6 +402,7 @@ export default {
     },
     renameInput() {
       invoke("rename_file", {
+        name: this.data.Name,
         fromName: this.fromName,
         toName: this.toName,
       }).then((response) => {
@@ -381,7 +414,7 @@ export default {
       event.target.select();
     },
     getTreeData() {
-      invoke("folder_list", {}).then((response) => {
+      invoke("folder_list", { name: this.data.Name }).then((response) => {
         this.treeData = [response];
       });
     },
@@ -390,6 +423,7 @@ export default {
         case "创建文件":
           store.state.stateList.push("命令：创建文件" + this.value);
           invoke("mk_file", {
+            name: this.data.Name,
             filename: this.value,
           }).then((response) => {
             store.state.stateList.push("响应：" + response);
@@ -399,6 +433,7 @@ export default {
         default:
           store.state.stateList.push("命令：创建文件夹" + this.value);
           invoke("mk_dir", {
+            name: this.data.Name,
             path: this.value,
           }).then((response) => {
             store.state.stateList.push("响应：" + response);
