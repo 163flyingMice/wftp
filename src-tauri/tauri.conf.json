@@ -62,7 +62,7 @@
     "windows": [
       {
         "fullscreen": false,
-        "height": 900,
+        "height": 880,
         "resizable": true,
         "title": "wftp",
         "width": 1136

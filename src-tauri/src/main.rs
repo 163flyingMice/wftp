@@ -7,6 +7,7 @@
 extern crate lazy_static;
 pub mod config;
 pub mod local;
+pub mod menu;
 pub mod operate;
 use config::{get_default_wftp, get_wftp_server, wftp_xml_string};
 use local::{get_file_modified, get_file_size};
@@ -39,6 +40,8 @@ fn main() {
             get_file_modified,
             quit,
         ])
+        .menu(menu::init(&tauri::generate_context!()))
+        .on_menu_event(menu::handler)
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

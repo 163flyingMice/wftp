@@ -1,8 +1,5 @@
 <template>
   <a-row>
-    <menu-bar />
-  </a-row>
-  <a-row>
     <action-button
       :changeModelVisible="changeModelVisible"
       :refreshRemote="refreshRemote"
@@ -187,7 +184,6 @@ import ActionButton from "./components/ActionButton.vue";
 import StateList from "./components/StateList.vue";
 import InputRow from "./components/InputRow.vue";
 import TransfeList from "./components/TransfeList.vue";
-import MenuBar from "./components/MenuBar.vue";
 import { invoke } from "@tauri-apps/api";
 import { PlusSquareOutlined } from "@ant-design/icons-vue";
 
@@ -196,7 +192,6 @@ export default {
   components: {
     PlusSquareOutlined,
     StateList,
-    MenuBar,
     TransfeList,
     RemoteSite,
     LocalSite,

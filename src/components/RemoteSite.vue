@@ -342,17 +342,19 @@ export default {
   watch: {},
   methods: {
     getData() {
-      this.getTreeData();
-      document
-        .querySelectorAll("tr")
-        .forEach((elem) => elem.classList.remove("selected"));
-      invoke("list", {
-        name: this.data.Name,
-        path: this.currentPath,
-      }).then((response) => {
-        store.state.stateList.push("状态：列出“" + this.currentPath + "”的目录成功");
-        this.dataSource = response;
-      });
+      if (store.state.connected) {
+        this.getTreeData();
+        document
+          .querySelectorAll("tr")
+          .forEach((elem) => elem.classList.remove("selected"));
+        invoke("list", {
+          name: this.data.Name,
+          path: this.currentPath,
+        }).then((response) => {
+          store.state.stateList.push("状态：列出“" + this.currentPath + "”的目录成功");
+          this.dataSource = response;
+        });
+      }
     },
 
     customRow(record) {
