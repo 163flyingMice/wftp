@@ -14,6 +14,7 @@ export default createStore({
         remoteSiteComponent: true,
         stateListComponent: true,
         connectedName: "",
+        modalVisible: false,
     },
     /**
      * 改变数据方法的集合
