@@ -8,7 +8,10 @@ pub fn init(context: &Context<EmbeddedAssets>) -> Menu {
     let file_menu = Submenu::new(
         "文件",
         Menu::new()
-            .add_item(CustomMenuItem::new("new_file".to_string(), "站点管理器"))
+            .add_item(CustomMenuItem::new(
+                "site_manager".to_string(),
+                "站点管理器",
+            ))
             .add_item(CustomMenuItem::new(
                 "new_file".to_string(),
                 "添加当前连接到站点管理器",
@@ -21,6 +24,7 @@ pub fn init(context: &Context<EmbeddedAssets>) -> Menu {
                 "edit_file".to_string(),
                 "显示正在被编辑的文件",
             ))
+            .add_item(CustomMenuItem::new("refresh_page".to_string(), "刷新页面"))
             .add_item(CustomMenuItem::new("edit_file".to_string(), "退出")),
     );
     let edit_menu = Submenu::new(
@@ -57,11 +61,14 @@ pub fn init(context: &Context<EmbeddedAssets>) -> Menu {
 // 应用菜单处理事件
 pub fn handler(event: WindowMenuEvent) {
     // 菜单所属的窗口
-    let _win = Some(event.window());
+    let win = Some(event.window());
     // 匹配菜单 id
     match event.menu_item_id() {
-        "new_file" => {
-            dbg!("new file");
+        "site_manager" => {
+            let _ = win.unwrap().emit("site_manager", "打开站点管理器").unwrap();
+        }
+        "refresh_page" => {
+            let _ = win.unwrap().emit("refresh_page", "刷新整个页面").unwrap();
         }
         "edit_file" => {}
         "undo" => {

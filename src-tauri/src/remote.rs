@@ -4,6 +4,9 @@ use ftp::FtpStream;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::Mutex};
 
+use crate::result::CustomError;
+use crate::result::{Error, Success, CONNECTED_SUCCESS_CODE, DISCONNECTED_ERROR_CODE};
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FolderTree {
     pub title: String,
@@ -66,10 +69,19 @@ impl FileList {
 pub fn alive(name: String) -> String {
     if let Some(temp) = OWNER_FTP_STREAM.lock().unwrap().get_mut(&name) {
         if let Some(_) = temp {
-            return String::from("已连接");
+            return serde_json::to_string(&Success::new(
+                CONNECTED_SUCCESS_CODE,
+                String::from("连接中"),
+                (),
+            ))
+            .unwrap();
         }
     }
-    String::from("已断开！")
+    serde_json::to_string(&Error::new(
+        DISCONNECTED_ERROR_CODE,
+        CustomError::GetFtpstreamError.to_string(),
+    ))
+    .unwrap()
 }
 
 #[tauri::command]
@@ -82,9 +94,18 @@ pub fn connect(addr: String, username: String, password: String, name: String) -
             .lock()
             .unwrap()
             .insert(name, Some(ftp_stream));
-        String::from("连接成功！")
+        serde_json::to_string(&Success::new(
+            CONNECTED_SUCCESS_CODE,
+            String::from("连接成功！"),
+            (),
+        ))
+        .unwrap()
     } else {
-        String::from("连接失败！")
+        serde_json::to_string(&Error::new(
+            DISCONNECTED_ERROR_CODE,
+            CustomError::GetFtpstreamError.to_string(),
+        ))
+        .unwrap()
     }
 }
 

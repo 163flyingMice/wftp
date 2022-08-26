@@ -1,5 +1,5 @@
 #![cfg_attr(
-    all(not(debug_assertions), target_os = "window&s"),
+    all(not(debug_assertions), target_os = "windows"),
     windows_subsystem = "windows"
 )]
 
@@ -8,10 +8,11 @@ extern crate lazy_static;
 pub mod config;
 pub mod local;
 pub mod menu;
-pub mod operate;
+pub mod remote;
+pub mod result;
 use config::{get_default_wftp, get_wftp_server, wftp_xml_string};
 use local::{get_file_modified, get_file_size};
-use operate::{
+use remote::{
     alive, connect, cwd, folder_list, list, mk_dir, mk_file, prev, pwd, quit, remove_dir,
     remove_file, rename_file, try_connect, upload,
 };

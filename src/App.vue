@@ -1,6 +1,9 @@
 <template>
   <a-row>
-    <action-button :changeModelVisible="changeModelVisible" :refreshRemote="refreshRemote" />
+    <action-button
+      :changeModelVisible="changeModelVisible"
+      :refreshRemote="refreshRemote"
+    />
   </a-row>
   <a-row>
     <input-row />
@@ -10,14 +13,30 @@
       <state-list />
     </a-col>
   </a-row>
-  <a-tabs @change="changeTab" v-model:activeKey="listActiveKey" type="editable-card" :hideAdd="true" @edit="editTab">
-    <a-tab-pane v-for="pane in panes" :key="pane.key" :tab="pane.title" :closable="pane.closable" ref="tabPane">
+  <a-tabs
+    @change="changeTab"
+    v-model:activeKey="listActiveKey"
+    type="editable-card"
+    :hideAdd="true"
+    @edit="editTab"
+  >
+    <a-tab-pane
+      v-for="pane in panes"
+      :key="pane.key"
+      :tab="pane.title"
+      :closable="pane.closable"
+      ref="tabPane"
+    >
       <a-row>
         <a-col :span="12">
           <local-site :state="localSiteState" :refreshRemote="refreshRemote" />
         </a-col>
         <a-col :span="12">
-          <remote-site :state="remoteSiteState" :ref="'remoteSite' + pane.key" :data="pane.data" />
+          <remote-site
+            :state="remoteSiteState"
+            :ref="'remoteSite' + pane.key"
+            :data="pane.data"
+          />
         </a-col>
       </a-row>
     </a-tab-pane>
@@ -59,9 +78,6 @@ export default {
   methods: {
     changeModelVisible() {
       store.state.modalVisible = !store.state.modalVisible;
-      this.$nextTick(() => {
-        this.$refs.siteManager.changeModelVisible();
-      })
     },
     selectLeaf(key, elem) {
       this.selectedKey = key;
@@ -93,7 +109,7 @@ export default {
         }
       }
     },
-    addTab() { },
+    addTab() {},
     editTab(targetKey, action) {
       if (action === "add") {
         this.addTab();
@@ -157,7 +173,7 @@ export default {
       ],
     };
   },
-  setup() { },
+  setup() {},
 };
 </script>
 
@@ -224,14 +240,14 @@ export default {
   background: #107bcb;
 }
 
-#components-layout-demo-basic>.code-box-demo>.ant-layout+.ant-layout {
+#components-layout-demo-basic > .code-box-demo > .ant-layout + .ant-layout {
   margin-top: 48px;
 }
 
-.ant-tabs-top>.ant-tabs-nav,
-.ant-tabs-bottom>.ant-tabs-nav,
-.ant-tabs-top>div>.ant-tabs-nav,
-.ant-tabs-bottom>div>.ant-tabs-nav {
+.ant-tabs-top > .ant-tabs-nav,
+.ant-tabs-bottom > .ant-tabs-nav,
+.ant-tabs-top > div > .ant-tabs-nav,
+.ant-tabs-bottom > div > .ant-tabs-nav {
   margin: 0 0 6px 0 !important;
 }
 </style>
