@@ -34,6 +34,7 @@
   >
     <a-col style="">
       <a-table
+        :customHeaderRow="customHeaderRow"
         v-mouse-menu="options"
         :columns="columns"
         :data-source="dataSource"
@@ -133,6 +134,11 @@ export default {
                 store.state.stateList.push("状态：" + response);
               });
               this.getData();
+            },
+            disabled: () => {
+              if (this.selected.kind != "folder") {
+                return true;
+              }
             },
           },
           {
@@ -250,6 +256,7 @@ export default {
         ],
       },
       treeData: [],
+      sortWay: true,
       prevPath: "/",
       currentPath: "/",
       dirBool: true,
@@ -344,7 +351,25 @@ export default {
         });
       }
     },
-
+    customHeaderRow() {
+      return {
+        onClick: (event) => {
+          this.sortWay = !this.sortWay;
+          if (
+            event.target.innerText == "文件名" ||
+            event.target.innerText == "文件大小"
+          ) {
+            let first = this.dataSource.shift();
+            invoke("size_sort", {
+              fileList: this.dataSource,
+              sortWay: this.sortWay,
+            }).then((response) => {
+              this.dataSource = [].concat(first, response);
+            });
+          }
+        },
+      };
+    },
     customRow(record) {
       return {
         align: "left",

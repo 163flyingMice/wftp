@@ -14,7 +14,7 @@ use config::{get_default_wftp, get_wftp_server, wftp_xml_string};
 use local::{get_file_modified, get_file_size};
 use remote::{
     alive, connect, cwd, folder_list, list, mk_dir, mk_file, prev, pwd, quit, remove_dir,
-    remove_file, rename_file, try_connect, upload,
+    remove_file, rename_file, size_sort, try_connect, upload,
 };
 
 fn main() {
@@ -40,8 +40,9 @@ fn main() {
             get_file_size,
             get_file_modified,
             quit,
+            size_sort
         ])
-        .menu(menu::init(&tauri::generate_context!()))
+        .menu(menu::init())
         .on_menu_event(menu::handler)
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

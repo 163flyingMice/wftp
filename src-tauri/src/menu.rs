@@ -1,10 +1,9 @@
-use tauri::utils::assets::EmbeddedAssets;
-use tauri::{Context, CustomMenuItem, Menu, MenuItem, Submenu, WindowMenuEvent};
+use tauri::{CustomMenuItem, Menu, Submenu, WindowMenuEvent};
 
 // 应用菜单项
-pub fn init(context: &Context<EmbeddedAssets>) -> Menu {
-    let _name = &context.package_info().name;
-    let app_menu = Submenu::new("原生菜单", Menu::new().add_native_item(MenuItem::Quit));
+pub fn init() -> Menu {
+    // let _name = &context.package_info().name;
+    // let app_menu = Submenu::new("原生菜单", Menu::new().add_native_item(MenuItem::Quit));
     let file_menu = Submenu::new(
         "文件",
         Menu::new()
@@ -25,7 +24,7 @@ pub fn init(context: &Context<EmbeddedAssets>) -> Menu {
                 "显示正在被编辑的文件",
             ))
             .add_item(CustomMenuItem::new("refresh_page".to_string(), "刷新页面"))
-            .add_item(CustomMenuItem::new("edit_file".to_string(), "退出")),
+            .add_item(CustomMenuItem::new("quit".to_string(), "退出")),
     );
     let edit_menu = Submenu::new(
         "编辑",
@@ -55,7 +54,6 @@ pub fn init(context: &Context<EmbeddedAssets>) -> Menu {
         .add_submenu(edit_menu)
         .add_submenu(view_menu)
         .add_submenu(transfer_menu)
-        .add_submenu(app_menu)
 }
 
 // 应用菜单处理事件
@@ -69,6 +67,9 @@ pub fn handler(event: WindowMenuEvent) {
         }
         "refresh_page" => {
             let _ = win.unwrap().emit("refresh_page", "刷新整个页面").unwrap();
+        }
+        "quit" => {
+            let _ = win.unwrap().close();
         }
         "edit_file" => {}
         "undo" => {

@@ -30,12 +30,12 @@ pub struct FolderLeaf {
     pub key: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct FileList {
     pub permissions: String,
     pub owner: String,
     pub group: String,
-    pub size: String,
+    pub size: usize,
     pub update_at: String,
     pub is_directory: String,
     pub name: HashMap<String, String>,
@@ -57,7 +57,7 @@ impl FileList {
             permissions: String::from(""),
             owner: String::from(""),
             group: String::from(""),
-            size: String::from(""),
+            size: 0,
             update_at: String::from(""),
             is_directory: String::from(""),
             name: name,
@@ -190,11 +190,18 @@ pub fn list(name: String) -> Option<Vec<FileList>> {
                     name.insert(String::from("kind"), String::from("file"));
                 }
                 name.insert(String::from("name"), temp_name);
+                let size: usize;
+                let temp_size = temp.iter().nth(temp_len - 6).unwrap();
+                if temp_size != "0" && temp_size != "" {
+                    size = temp_size.parse::<usize>().unwrap();
+                } else {
+                    size = 0;
+                }
                 file_list.push(FileList {
                     permissions: temp.iter().nth(0).unwrap().to_string(),
                     owner: temp.iter().nth(2).unwrap().to_string(),
                     group: temp.iter().nth(3).unwrap().to_string(),
-                    size: temp.iter().nth(temp_len - 6).unwrap().to_string(),
+                    size: size,
                     is_directory: is_directory,
                     update_at: temp.iter().nth(temp_len - 4).unwrap().to_string()
                         + " "
@@ -355,4 +362,29 @@ pub fn quit(name: String) -> String {
         }
     }
     String::from("出现异常!")
+}
+
+#[tauri::command]
+pub fn size_sort(mut file_list: Option<Vec<FileList>>, sort_way: bool) -> Option<Vec<FileList>> {
+    if let Some(list) = file_list.as_mut() {
+        let mut len = list.len();
+        while len > 1 {
+            let mut pos_max = 0;
+            for i in 1..len {
+                if sort_way {
+                    if list[i].size > list[pos_max].size {
+                        pos_max = i;
+                    }
+                } else {
+                    if list[i].size < list[pos_max].size {
+                        pos_max = i;
+                    }
+                }
+            }
+            len -= 1;
+            list.swap(pos_max, len);
+        }
+        return Some(list.to_vec());
+    }
+    None
 }
