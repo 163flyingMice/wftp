@@ -1,5 +1,6 @@
 <template>
-    <a-modal :visible="addLableVisible" title="新建书签" centered cancelText="取消" okText="确定">
+    <a-modal :maskClosable="false" :visible="addLableVisible" title="新建书签" centered cancelText="取消" okText="确定"
+        @cancel="addLableVisible = false">
         <a-step title="类型" />
         <a-form>
             <a-form-item>
@@ -19,14 +20,12 @@
         <a-step title="路径" />
         <a-form layout="inline">
             <a-form-item label="本地目录">
-                <a-input v-model:value="name" />
+                <a-input v-model:value="localDirectory" />
             </a-form-item>
             <a-form-item>
-                <a-upload v-model:file-list="fileList" name="file">
-                    <a-button>
-                        Click to Upload
-                    </a-button>
-                </a-upload>
+                <a-button @click="handleClick">
+                    浏览
+                </a-button>
             </a-form-item>
         </a-form>
         <a-form>
@@ -46,9 +45,14 @@
 import store from '@/store';
 
 export default {
+    components: {
+    },
     setup() {
     },
     methods: {
+        handleClick() {
+            store.state.folderBrowserVisible = true;
+        }
     },
     data() {
         return {
@@ -58,8 +62,16 @@ export default {
         }
     },
     computed: {
-        addLableVisible() {
-            return store.state.addLableVisible;
+        addLableVisible: {
+            get() {
+                return store.state.addLableVisible;
+            },
+            set(value) {
+                store.state.addLableVisible = value;
+            },
+        },
+        localDirectory() {
+            return store.state.folderBrowserDirectory;
         }
     },
 
