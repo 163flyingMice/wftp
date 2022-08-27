@@ -12,49 +12,30 @@
     </a-button>
     <template #overlay>
       <a-menu>
-        <a-menu-item
-          v-for="(placement, index) in wftpServer"
-          :key="index"
-          @click="connect"
-        >
+        <a-menu-item v-for="(placement, index) in wftpServer" :key="index" @click="connect">
           {{ placement.Name }}
         </a-menu-item>
       </a-menu>
     </template>
   </a-dropdown>
 
-  <a-button
-    style="margin-left: 6px"
-    size="small"
-    type="default"
-    :onclick="changeStateList"
-    :class="{ 'selected-button': stateListComponent }"
-  >
+  <a-button style="margin-left: 6px" size="small" type="default" :onclick="changeStateList"
+    :class="{ 'selected-button': stateListComponent }">
     <template #icon>
       <PicCenterOutlined />
     </template>
   </a-button>
-  <a-button
-    size="small"
-    type="default"
-    :onclick="changeLocalSite"
-    :class="{ 'selected-button': localSiteComponent }"
-  >
+  <a-button size="small" type="default" :onclick="changeLocalSite" :class="{ 'selected-button': localSiteComponent }">
     <template #icon>
       <PicLeftOutlined />
     </template>
   </a-button>
-  <a-button
-    size="small"
-    type="default"
-    :onclick="changeRemoteSite"
-    :class="{ 'selected-button': remoteSiteComponent }"
-  >
+  <a-button size="small" type="default" :onclick="changeRemoteSite" :class="{ 'selected-button': remoteSiteComponent }">
     <template #icon>
       <PicRightOutlined />
     </template>
   </a-button>
-  <a-button size="small" type="default" :onclick="refreshRemote">
+  <a-button :disabled="noConnect" size="small" type="default" :onclick="refreshRemote">
     <template #icon>
       <redo-outlined />
     </template>
@@ -96,6 +77,9 @@ export default {
     stateListComponent() {
       return store.state.stateListComponent;
     },
+    noConnect() {
+      return !store.state.panes.length;
+    },
   },
   methods: {
     changeLocalSite() {
@@ -118,6 +102,7 @@ export default {
   color: #40a9ff;
   border-color: #40a9ff;
 }
+
 .wftp-server.ant-dropdown-placement-bottom {
   left: 2px !important;
   width: 150px;

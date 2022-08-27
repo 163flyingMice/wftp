@@ -10,4 +10,7 @@ export function definedListeningEvent() {
     listen('refresh_page', () => {
         window.location.reload();
     });
+    listen('add_label', () => {
+        store.state.addLableVisible = true;
+    });
 }

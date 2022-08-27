@@ -42,7 +42,7 @@
             </a-layout-sider>
             <a-layout>
                 <a-tabs v-model:activeKey="activeKey" type="card">
-                    <a-tab-pane key="1" tab="常规">
+                    <a-tab-pane key="1" tab="常规" :disabled="!hasSelected">
                         <a-row>
                             <a-form>
                                 <a-form-item label="协议" name="protocol">
@@ -81,7 +81,7 @@
                         </a-row>
                         <a-row>
                             <a-form>
-                                <a-form-item label="背景颜色" name="color" style="width: 120px">
+                                <a-form-item label="背景颜色" name="color" style="width: 150px">
                                     <a-select :disabled="!hasSelected">
                                         <a-select-option value="111"></a-select-option>
                                     </a-select>
@@ -93,14 +93,111 @@
                             </a-form>
                         </a-row>
                     </a-tab-pane>
-                    <a-tab-pane key="2" tab="高级"></a-tab-pane>
-                    <a-tab-pane key="3" tab="传输设置"></a-tab-pane>
-                    <a-tab-pane key="4" tab="字符集"></a-tab-pane>
+                    <a-tab-pane key="2" tab="高级" :disabled="!hasSelected">
+                        <a-row>
+                            <a-form>
+                                <a-form-item label="服务器类型" name="serverType" style="width: 300px">
+                                    <a-select v-model:value="serverType">
+                                        <a-select-option :value="elem" v-for="(elem, index) in serverTypes"
+                                            :key="index">
+                                            {{ elem }}
+                                        </a-select-option>
+                                    </a-select>
+                                </a-form-item>
+                                <a-form-item name="serverType">
+                                    <a-checkbox name="type">绕过代理</a-checkbox>
+                                </a-form-item>
+                                <a-form-item label="默认本地目录" name="serverType">
+                                </a-form-item>
+                                <a-form layout="inline">
+                                    <a-form-item>
+                                        <a-input />
+                                    </a-form-item>
+                                    <a-form-item>
+                                        <a-button @click="handleClick">
+                                            浏览
+                                        </a-button>
+                                    </a-form-item>
+                                </a-form>
+                                <a-form-item label="默认远程目录" name="serverType">
+                                </a-form-item>
+                                <a-form-item>
+                                    <a-input />
+                                </a-form-item>
+                                <a-form>
+                                    <a-form-item label="远程目录">
+                                        <a-input v-model:value="name" />
+                                    </a-form-item>
+                                    <a-form-item>
+                                        <a-checkbox name="type">使用同步浏览</a-checkbox>
+                                    </a-form-item>
+                                    <a-form-item>
+                                        <a-checkbox name="type">目录对比</a-checkbox>
+                                    </a-form-item>
+                                </a-form>
+                                <a-form-item label="调整服务器时间，时间差值" name="serverType">
+                                </a-form-item>
+                                <a-form layout="inline">
+                                    <a-form-item>
+                                        <a-input-number v-model:value="localDirectory" />小时
+                                    </a-form-item>
+                                    <a-form-item>
+                                        <a-input-number v-model:value="localDirectory" />分钟
+                                    </a-form-item>
+                                </a-form>
+                            </a-form>
+                        </a-row>
+                    </a-tab-pane>
+                    <a-tab-pane key="3" tab="传输设置" :disabled="!hasSelected">
+                        <a-row>
+                            <a-form>
+                                <a-form-item label="传输方式">
+                                </a-form-item>
+                                <a-form-item>
+                                    <a-radio-group>
+                                        <a-radio value="1">默认</a-radio>
+                                        <a-radio value="2">主动</a-radio>
+                                        <a-radio value="3">被动</a-radio>
+                                    </a-radio-group>
+                                </a-form-item>
+                                <a-form-item>
+                                    <a-checkbox name="type">限制并发连接数</a-checkbox>
+                                </a-form-item>
+                                <a-form-item label="最大连接数">
+                                    <a-input-number />
+                                </a-form-item>
+                            </a-form>
+                        </a-row>
+                    </a-tab-pane>
+                    <a-tab-pane key="4" tab="字符集" :disabled="!hasSelected">
+                        <a-row>
+                            <a-form>
+                                <a-form-item label="服务器使用以下...">
+                                </a-form-item>
+                                <a-radio-group>
+                                    <a-form-item>
+                                        <a-radio value="1">自动检测</a-radio>
+                                    </a-form-item>
+                                    <a-form-item>
+                                        <a-radio value="2">强制UTF-8</a-radio>
+                                    </a-form-item>
+                                    <a-form-item>
+                                        <a-radio value="3">使用自定义的字符集</a-radio>
+                                    </a-form-item>
+                                </a-radio-group>
+                                <a-form-item label="编码" style="width: 150px;">
+                                    <a-input />
+                                </a-form-item>
+                                <a-form-item label="使用错误的字符集...">
+                                </a-form-item>
+                            </a-form>
+                        </a-row>
+                    </a-tab-pane>
                 </a-tabs>
             </a-layout>
         </a-layout>
         <template #footer>
-            <a-button>连接</a-button>
+            <a-button @click="handleLink">连接</a-button>
             <a-button @click="handleOk">确定</a-button>
             <a-button @click="modalVisible = false">取消</a-button>
         </template>
@@ -236,6 +333,22 @@ export default {
             this.selected.LogonType = this.loginType;
             this.saveXml();
         },
+        handleLink() {
+            let key = store.state.panes.length != 0 ? store.state.panes.length + 1 : 1
+            store.state.panes.push({
+                title: this.selected.Name,
+                key: key,
+                data: {
+                    Host: this.host,
+                    User: this.user,
+                    Pass: this.pass,
+                    Port: this.port,
+                    Name: this.selected.Name,
+                },
+            })
+            this.modalVisible = false;
+            store.state.listActiveKey = key
+        }
     },
     computed: {
         modalVisible: {
@@ -262,6 +375,8 @@ export default {
             user: "",
             port: "",
             pass: "",
+            serverType: "默认（自动检测）",
+            serverTypes: ["默认（自动检测）"],
             listActiveKey: "1",
             treeData: [],
         };

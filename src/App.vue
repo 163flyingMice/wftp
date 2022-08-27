@@ -10,7 +10,8 @@
       <state-list />
     </a-col>
   </a-row>
-  <a-tabs @change="changeTab" v-model:activeKey="listActiveKey" type="editable-card" :hideAdd="true" @edit="editTab">
+  <a-tabs v-if="noConnect" @change="changeTab" v-model:activeKey="listActiveKey" type="editable-card" :hideAdd="true"
+    @edit="editTab">
     <a-tab-pane v-for="pane in panes" :key="pane.key" :tab="pane.title" :closable="pane.closable" ref="tabPane">
       <a-row>
         <a-col :span="12">
@@ -22,6 +23,15 @@
       </a-row>
     </a-tab-pane>
   </a-tabs>
+  <a-row v-else>
+    <a-col :span="12">
+      <local-site :state="localSiteState" :refreshRemote="refreshRemote" />
+    </a-col>
+    <a-col :span="12">
+      <remote-site :state="remoteSiteState" />
+    </a-col>
+  </a-row>
+
   <a-row>
     <a-col :span="24">
       <transfe-list />
@@ -30,10 +40,12 @@
   <site-manager ref="siteManager" v-if="modalVisible" />
   <label-manager />
   <add-label />
+  <folder-browser />
 </template>
 
 <script>
 import store from "@/store/index";
+import FolderBrowser from "./components/FolderBrowser.vue";
 import RemoteSite from "./components/RemoteSite.vue";
 import LocalSite from "./components/LocalSite.vue";
 import ActionButton from "./components/ActionButton.vue";
@@ -47,6 +59,7 @@ import AddLabel from "./components/AddLabel.vue";
 export default {
   name: "App",
   components: {
+    FolderBrowser,
     AddLabel,
     LabelManager,
     StateList,
@@ -58,7 +71,9 @@ export default {
     SiteManager,
   },
   mounted() {
-    store.state.connectedName = this.panes[0].data.Name;
+    if (this.panes.length != 0) {
+      store.state.connectedName = this.panes[0].data.Name;
+    }
   },
   methods: {
     changeModelVisible() {
@@ -75,6 +90,7 @@ export default {
       this.loginType = this.loginTypes[elem.node.LogonType];
     },
     refreshRemote() {
+      console.log(this.listActiveKey)
       this.$refs["remoteSite" + this.listActiveKey][0].getData();
     },
     removeTab(targetKey) {
@@ -113,6 +129,9 @@ export default {
     },
   },
   computed: {
+    noConnect() {
+      return store.state.panes.length;
+    },
     modalVisible() {
       return store.state.modalVisible;
     },
@@ -128,13 +147,25 @@ export default {
     wftpServer() {
       return store.state.wftpServer;
     },
-    panes() {
-      return store.state.panes;
+    panes: {
+      get() {
+        return store.state.panes;
+      },
+      set(value) {
+        store.state.panes = value;
+      }
     },
+    listActiveKey: {
+      get() {
+        return store.state.listActiveKey;
+      },
+      set(value) {
+        store.state.listActiveKey = value;
+      }
+    }
   },
   data() {
     return {
-      listActiveKey: "1",
     };
   },
   setup() { },

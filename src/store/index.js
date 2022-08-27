@@ -15,30 +15,11 @@ export default createStore({
         stateListComponent: true,
         connectedName: "",
         modalVisible: false,
-        panes: [{
-                title: "我的站点",
-                key: "1",
-                data: {
-                    Host: "127.0.0.1",
-                    User: "root",
-                    Pass: "root",
-                    Port: "21",
-                    Name: "我的站点",
-                },
-            },
-            {
-                title: "我的站点1",
-                key: "2",
-                data: {
-                    Host: "127.0.0.1",
-                    User: "root",
-                    Pass: "root",
-                    Port: "65521",
-                    Name: "我的站点1",
-                },
-            },
-        ],
-        addLableVisible: true,
+        panes: [],
+        addLableVisible: false,
+        folderBrowserVisible: false,
+        folderBrowserDirectory: "",
+        listActiveKey: "1",
     },
     /**
      * 改变数据方法的集合

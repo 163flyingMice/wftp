@@ -48,12 +48,24 @@ pub fn init() -> Menu {
                 "对已存在文件的默认操作",
             )),
     );
+    let server_menu = Submenu::new(
+        "服务器",
+        Menu::new().add_item(CustomMenuItem::new("undo".to_string(), "取消当前操作")),
+    );
+    let lable_menu = Submenu::new(
+        "书签",
+        Menu::new()
+            .add_item(CustomMenuItem::new("add_label".to_string(), "添加书签"))
+            .add_item(CustomMenuItem::new("lable_manager".to_string(), "书签管理")),
+    );
 
     Menu::new()
         .add_submenu(file_menu)
         .add_submenu(edit_menu)
         .add_submenu(view_menu)
         .add_submenu(transfer_menu)
+        .add_submenu(server_menu)
+        .add_submenu(lable_menu)
 }
 
 // 应用菜单处理事件
@@ -70,6 +82,12 @@ pub fn handler(event: WindowMenuEvent) {
         }
         "quit" => {
             let _ = win.unwrap().close();
+        }
+        "add_label" => {
+            let _ = win.unwrap().emit("add_label", "添加标签").unwrap();
+        }
+        "lable_manager" => {
+            let _ = win.unwrap().emit("lable_manager", "标签管理").unwrap();
         }
         "edit_file" => {}
         "undo" => {
