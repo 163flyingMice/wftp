@@ -16,6 +16,7 @@ use remote::{
     alive, connect, cwd, folder_list, list, mk_dir, mk_file, prev, pwd, quit, remove_dir,
     remove_file, rename_file, size_sort, try_connect, upload,
 };
+use tauri::generate_context;
 
 fn main() {
     tauri::Builder::default()
@@ -44,6 +45,6 @@ fn main() {
         ])
         .menu(menu::init())
         .on_menu_event(menu::handler)
-        .run(tauri::generate_context!())
+        .run(generate_context!())
         .expect("error while running tauri application");
 }

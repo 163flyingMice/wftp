@@ -1,5 +1,7 @@
 import store from '@/store';
-import { listen } from '@tauri-apps/api/event';
+import {
+    listen
+} from '@tauri-apps/api/event';
 
 export function definedListeningEvent() {
     listen('site_manager', () => {

@@ -1,9 +1,6 @@
 <template>
   <a-row>
-    <action-button
-      :changeModelVisible="changeModelVisible"
-      :refreshRemote="refreshRemote"
-    />
+    <action-button :changeModelVisible="changeModelVisible" :refreshRemote="refreshRemote" />
   </a-row>
   <a-row>
     <input-row />
@@ -13,30 +10,14 @@
       <state-list />
     </a-col>
   </a-row>
-  <a-tabs
-    @change="changeTab"
-    v-model:activeKey="listActiveKey"
-    type="editable-card"
-    :hideAdd="true"
-    @edit="editTab"
-  >
-    <a-tab-pane
-      v-for="pane in panes"
-      :key="pane.key"
-      :tab="pane.title"
-      :closable="pane.closable"
-      ref="tabPane"
-    >
+  <a-tabs @change="changeTab" v-model:activeKey="listActiveKey" type="editable-card" :hideAdd="true" @edit="editTab">
+    <a-tab-pane v-for="pane in panes" :key="pane.key" :tab="pane.title" :closable="pane.closable" ref="tabPane">
       <a-row>
         <a-col :span="12">
           <local-site :state="localSiteState" :refreshRemote="refreshRemote" />
         </a-col>
         <a-col :span="12">
-          <remote-site
-            :state="remoteSiteState"
-            :ref="'remoteSite' + pane.key"
-            :data="pane.data"
-          />
+          <remote-site :state="remoteSiteState" :ref="'remoteSite' + pane.key" :data="pane.data" />
         </a-col>
       </a-row>
     </a-tab-pane>
@@ -46,9 +27,9 @@
       <transfe-list />
     </a-col>
   </a-row>
-  <a-row>
-    <site-manager ref="siteManager" v-if="modalVisible" />
-  </a-row>
+  <site-manager ref="siteManager" v-if="modalVisible" />
+  <label-manager />
+  <add-label />
 </template>
 
 <script>
@@ -60,10 +41,14 @@ import StateList from "./components/StateList.vue";
 import InputRow from "./components/InputRow.vue";
 import TransfeList from "./components/TransfeList.vue";
 import SiteManager from "./components/SiteManager.vue";
+import LabelManager from "./components/LabelManager.vue";
+import AddLabel from "./components/AddLabel.vue";
 
 export default {
   name: "App",
   components: {
+    AddLabel,
+    LabelManager,
     StateList,
     TransfeList,
     RemoteSite,
@@ -109,7 +94,7 @@ export default {
         }
       }
     },
-    addTab() {},
+    addTab() { },
     editTab(targetKey, action) {
       if (action === "add") {
         this.addTab();
@@ -143,37 +128,16 @@ export default {
     wftpServer() {
       return store.state.wftpServer;
     },
+    panes() {
+      return store.state.panes;
+    },
   },
   data() {
     return {
       listActiveKey: "1",
-      panes: [
-        {
-          title: "我的站点",
-          key: "1",
-          data: {
-            Host: "127.0.0.1",
-            User: "root",
-            Pass: "root",
-            Port: "21",
-            Name: "我的站点",
-          },
-        },
-        {
-          title: "我的站点1",
-          key: "2",
-          data: {
-            Host: "127.0.0.1",
-            User: "root",
-            Pass: "root",
-            Port: "65521",
-            Name: "我的站点1",
-          },
-        },
-      ],
     };
   },
-  setup() {},
+  setup() { },
 };
 </script>
 
@@ -240,14 +204,14 @@ export default {
   background: #107bcb;
 }
 
-#components-layout-demo-basic > .code-box-demo > .ant-layout + .ant-layout {
+#components-layout-demo-basic>.code-box-demo>.ant-layout+.ant-layout {
   margin-top: 48px;
 }
 
-.ant-tabs-top > .ant-tabs-nav,
-.ant-tabs-bottom > .ant-tabs-nav,
-.ant-tabs-top > div > .ant-tabs-nav,
-.ant-tabs-bottom > div > .ant-tabs-nav {
+.ant-tabs-top>.ant-tabs-nav,
+.ant-tabs-bottom>.ant-tabs-nav,
+.ant-tabs-top>div>.ant-tabs-nav,
+.ant-tabs-bottom>div>.ant-tabs-nav {
   margin: 0 0 6px 0 !important;
 }
 </style>
