@@ -90,7 +90,6 @@ export default {
       this.loginType = this.loginTypes[elem.node.LogonType];
     },
     refreshRemote() {
-      console.log(this.listActiveKey)
       this.$refs["remoteSite" + this.listActiveKey][0].getData();
     },
     removeTab(targetKey) {
