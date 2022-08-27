@@ -58,6 +58,14 @@ pub fn init() -> Menu {
             .add_item(CustomMenuItem::new("add_label".to_string(), "添加书签"))
             .add_item(CustomMenuItem::new("lable_manager".to_string(), "书签管理")),
     );
+    let help_menu = Submenu::new(
+        "帮助",
+        Menu::new().add_item(CustomMenuItem::new("add_label".to_string(), "检查更新")),
+    );
+    let version_menu = Submenu::new(
+        "新版本",
+        Menu::new().add_item(CustomMenuItem::new("add_label".to_string(), "版本")),
+    );
 
     Menu::new()
         .add_submenu(file_menu)
@@ -66,6 +74,8 @@ pub fn init() -> Menu {
         .add_submenu(transfer_menu)
         .add_submenu(server_menu)
         .add_submenu(lable_menu)
+        .add_submenu(help_menu)
+        .add_submenu(version_menu)
 }
 
 // 应用菜单处理事件

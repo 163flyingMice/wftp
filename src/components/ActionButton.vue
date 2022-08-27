@@ -35,7 +35,13 @@
       <PicRightOutlined />
     </template>
   </a-button>
-  <a-button :disabled="noConnect" size="small" type="default" :onclick="refreshRemote">
+  <a-button size="small" type="default" :onclick="changeTransfeList">
+    <template #icon>
+      <swap-outlined />
+    </template>
+  </a-button>
+  <div class="line"></div>
+  <a-button style="margin-left: 6px" :disabled="noConnect" size="small" type="default" :onclick="refreshRemote">
     <template #icon>
       <redo-outlined />
     </template>
@@ -45,6 +51,7 @@
 import store from "@/store";
 import {
   RedoOutlined,
+  SwapOutlined,
   MenuFoldOutlined,
   PicLeftOutlined,
   PicRightOutlined,
@@ -57,6 +64,7 @@ export default {
     changeModelVisible: Function,
   },
   components: {
+    SwapOutlined,
     RedoOutlined,
     MenuFoldOutlined,
     PicLeftOutlined,
@@ -80,6 +88,9 @@ export default {
     noConnect() {
       return !store.state.panes.length;
     },
+    transfeList() {
+      return store.state.transfeListComponent;
+    },
   },
   methods: {
     changeLocalSite() {
@@ -90,6 +101,9 @@ export default {
     },
     changeStateList() {
       store.state.stateListComponent = !store.state.stateListComponent;
+    },
+    changeTransfeList() {
+      store.state.transfeListComponent = !store.state.transfeListComponent;
     },
     connect(event) {
       console.log(event);
@@ -106,5 +120,11 @@ export default {
 .wftp-server.ant-dropdown-placement-bottom {
   left: 2px !important;
   width: 150px;
+}
+
+.line {
+  height: 24px;
+  margin-left: 6px;
+  border-right: 1px solid black;
 }
 </style>

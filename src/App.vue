@@ -32,7 +32,7 @@
     </a-col>
   </a-row>
 
-  <a-row>
+  <a-row v-show="transfeListState">
     <a-col :span="24">
       <transfe-list />
     </a-col>
@@ -142,6 +142,9 @@ export default {
     },
     remoteSiteState() {
       return store.state.remoteSiteComponent;
+    },
+    transfeListState() {
+      return store.state.transfeListComponent;
     },
     wftpServer() {
       return store.state.wftpServer;
