@@ -13,4 +13,8 @@ export function definedListeningEvent() {
     listen('add_label', () => {
         store.state.addLableVisible = true;
     });
+    listen('label_manager', () => {
+        console.log(1)
+        store.state.labelManagerVisible = true;
+    });
 }

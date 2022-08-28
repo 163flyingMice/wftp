@@ -55,7 +55,7 @@ pub fn init() -> Menu {
         "书签",
         Menu::new()
             .add_item(CustomMenuItem::new("add_label".to_string(), "添加书签"))
-            .add_item(CustomMenuItem::new("lable_manager".to_string(), "书签管理")),
+            .add_item(CustomMenuItem::new("label_manager".to_string(), "书签管理")),
     );
     let help_menu = Submenu::new(
         "帮助",
@@ -95,8 +95,8 @@ pub fn handler(event: WindowMenuEvent) {
         "add_label" => {
             let _ = win.unwrap().emit("add_label", "添加标签").unwrap();
         }
-        "lable_manager" => {
-            let _ = win.unwrap().emit("lable_manager", "标签管理").unwrap();
+        "label_manager" => {
+            let _ = win.unwrap().emit("label_manager", "标签管理").unwrap();
         }
         "edit_file" => {}
         "undo" => {

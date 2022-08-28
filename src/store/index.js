@@ -21,6 +21,7 @@ export default createStore({
         folderBrowserDirectory: "",
         listActiveKey: "1",
         transfeListComponent: true,
+        labelManagerVisible: false,
     },
     /**
      * 改变数据方法的集合
