@@ -6,7 +6,7 @@
     <input-row />
   </a-row>
   <a-row v-show="stateListState">
-    <a-col :span="24" style="overflow-y: auto; max-height: 50px; max-height: 50px">
+    <a-col :span="24" style="overflow-y: auto; max-height: 50px; min-height: 50px">
       <state-list />
     </a-col>
   </a-row>

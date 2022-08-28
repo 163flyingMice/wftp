@@ -8,6 +8,35 @@ export default createStore({
      */
     state: {
         stateList: [],
+        transfeList: [{
+            'localName': '123',
+            'size': '10000',
+            'direction': '->',
+            'remoteName': '',
+            'priority': '高',
+            'time': '456',
+        }, {
+            'localName': '',
+            'size': '10000',
+            'direction': '<-',
+            'remoteName': '456',
+            'priority': '高',
+            'time': '456',
+        }, {
+            'localName': '',
+            'size': '10000',
+            'direction': '<-',
+            'remoteName': '456',
+            'priority': '高',
+            'time': '456',
+        }, {
+            'localName': '',
+            'size': '10000',
+            'direction': '<-',
+            'remoteName': '456',
+            'priority': '高',
+            'time': '456',
+        }],
         connected: false,
         wftpServer: [],
         localSiteComponent: true,
