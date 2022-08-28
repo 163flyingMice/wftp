@@ -12,7 +12,7 @@
     </a-button>
     <template #overlay>
       <a-menu>
-        <a-menu-item v-for="(placement, index) in wftpServer" :key="index" @click="connect">
+        <a-menu-item v-for="(placement, index) in wftpServer" :key="index" @click="connect(index)">
           {{ placement.Name }}
         </a-menu-item>
       </a-menu>
@@ -35,7 +35,8 @@
       <PicRightOutlined />
     </template>
   </a-button>
-  <a-button size="small" type="default" :onclick="changeTransfeList">
+  <a-button size="small" type="default" :onclick="changeTransfeList"
+    :class="{ 'selected-button': transfeListComponent }">
     <template #icon>
       <swap-outlined />
     </template>
@@ -88,7 +89,7 @@ export default {
     noConnect() {
       return !store.state.panes.length;
     },
-    transfeList() {
+    transfeListComponent() {
       return store.state.transfeListComponent;
     },
   },
@@ -105,8 +106,14 @@ export default {
     changeTransfeList() {
       store.state.transfeListComponent = !store.state.transfeListComponent;
     },
-    connect(event) {
-      console.log(event);
+    connect(index) {
+      let key = store.state.panes.length != 0 ? store.state.panes.length + 1 : 1
+      store.state.panes.push({
+        title: this.wftpServer[index].Name,
+        key: key,
+        data: this.wftpServer[index],
+      })
+      store.state.listActiveKey = key
     },
   },
 };

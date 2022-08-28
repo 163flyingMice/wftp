@@ -23,7 +23,6 @@ pub fn init() -> Menu {
                 "edit_file".to_string(),
                 "显示正在被编辑的文件",
             ))
-            .add_item(CustomMenuItem::new("refresh_page".to_string(), "刷新页面"))
             .add_item(CustomMenuItem::new("quit".to_string(), "退出")),
     );
     let edit_menu = Submenu::new(
@@ -36,7 +35,7 @@ pub fn init() -> Menu {
     let view_menu = Submenu::new(
         "查看",
         Menu::new()
-            .add_item(CustomMenuItem::new("undo".to_string(), "刷新"))
+            .add_item(CustomMenuItem::new("refresh_page".to_string(), "刷新"))
             .add_item(CustomMenuItem::new("redo".to_string(), "目录列表过滤器")),
     );
     let transfer_menu = Submenu::new(

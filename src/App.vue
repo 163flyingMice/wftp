@@ -6,7 +6,7 @@
     <input-row />
   </a-row>
   <a-row v-show="stateListState">
-    <a-col :span="24" style="overflow-y: auto; max-height: 50px">
+    <a-col :span="24" style="overflow-y: auto; max-height: 50px; max-height: 50px">
       <state-list />
     </a-col>
   </a-row>
@@ -37,7 +37,7 @@
       <transfe-list />
     </a-col>
   </a-row>
-  <site-manager ref="siteManager" v-if="modalVisible" />
+  <site-manager ref="siteManager" v-if="modalVisible" :refreshWftpServer="getWftpServer" />
   <label-manager />
   <add-label />
   <folder-browser />
@@ -55,6 +55,7 @@ import TransfeList from "./components/TransfeList.vue";
 import SiteManager from "./components/SiteManager.vue";
 import LabelManager from "./components/LabelManager.vue";
 import AddLabel from "./components/AddLabel.vue";
+import { invoke } from "@tauri-apps/api";
 
 export default {
   name: "App",
@@ -74,8 +75,27 @@ export default {
     if (this.panes.length != 0) {
       store.state.connectedName = this.panes[0].data.Name;
     }
+    this.getDefaultWftp();
+    this.getWftpServer();
   },
   methods: {
+    getDefaultWftp() {
+      if (!localStorage.getItem("wftp_server")) {
+        invoke("get_default_wftp", {}).then((response) => {
+          localStorage.setItem("wftp_server", response);
+          this.getWftpServer();
+        });
+      }
+    },
+    getWftpServer() {
+      if (localStorage.getItem("wftp_server")) {
+        invoke("get_wftp_server", { wftpXml: localStorage.getItem("wftp_server") }).then(
+          (response) => {
+            store.state.wftpServer = response;
+          }
+        );
+      }
+    },
     changeModelVisible() {
       store.state.modalVisible = !store.state.modalVisible;
     },

@@ -22,7 +22,7 @@
       </div>
     </a-col>
   </a-row>
-  <a-row style="min-height: 300px !important; max-height: 300px; overflow: auto" class="remoteTable">
+  <a-row style="min-height: 300px !important;  overflow: auto" class="remoteTable">
     <a-col style="">
       <a-table :customHeaderRow="customHeaderRow" v-mouse-menu="options" :columns="columns" :data-source="dataSource"
         :pagination="false" :customRow="customRow" :scroll="{ x: 800 }">
@@ -284,6 +284,7 @@ export default {
   },
   mounted() {
     if (this.data) {
+      store.state.stateList.push("状态：正在连接" + this.data.Name);
       invoke("connect", {
         name: this.data.Name,
         addr: this.data.Host + ":" + this.data.Port,
@@ -294,7 +295,9 @@ export default {
         if (res.code == 200) {
           store.state.connected = true;
         }
-        store.state.stateList.push("状态：" + res.msg);
+        store.state.stateList.push("响应：" + res.msg);
+      }).catch((err) => {
+        store.state.stateList.push("响应：" + err);
       });
     }
     this.$watch(

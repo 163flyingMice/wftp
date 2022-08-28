@@ -36,10 +36,10 @@ pub struct Pass(String);
 pub struct Name(String);
 
 #[derive(Debug, Deserialize, PartialEq, Default, Serialize)]
-pub struct Protocol(String);
+pub struct Protocol(usize);
 
 #[derive(Debug, Deserialize, PartialEq, Default, Serialize)]
-pub struct LogonType(String);
+pub struct LogonType(usize);
 
 #[derive(Debug, Deserialize, PartialEq, Default, Serialize)]
 pub struct WftpServer {

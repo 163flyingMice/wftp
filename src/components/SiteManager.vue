@@ -30,13 +30,13 @@
                 <a-row style="margin-top: 5px" class="button">
                     <a-col :span="24" align="middle">
                         <a-button type="default">新键书签</a-button>
-                        <a-button type="default" @click="rename" :disabled="selected == ''">重命名</a-button>
+                        <a-button type="default" @click="rename" :disabled="!hasSelected">重命名</a-button>
                     </a-col>
                 </a-row>
                 <a-row style="margin-top: 5px" class="button">
                     <a-col :span="24" align="middle">
-                        <a-button type="default" @click="del" :disabled="selected == ''">删除</a-button>
-                        <a-button type="default" @click="copy" :disabled="selected == ''">复制</a-button>
+                        <a-button type="default" @click="del" :disabled="!hasSelected">删除</a-button>
+                        <a-button type="default" @click="copy" :disabled="!hasSelected">复制</a-button>
                     </a-col>
                 </a-row>
             </a-layout-sider>
@@ -210,21 +210,16 @@ import { invoke } from "@tauri-apps/api";
 import { PlusSquareOutlined } from "@ant-design/icons-vue";
 
 export default {
+    props: {
+        refreshWftpServer: Function,
+    },
     components: {
         PlusSquareOutlined,
     },
     mounted() {
-        this.getDefaultWftp();
         this.getWftpServer();
     },
     methods: {
-        getDefaultWftp() {
-            if (!localStorage.getItem("wftp_server")) {
-                invoke("get_default_wftp", {}).then((response) => {
-                    localStorage.setItem("wftp_server", response);
-                });
-            }
-        },
         selectLeaf(key, elem) {
             if (elem.node.key != "0") {
                 this.hasSelected = true;
@@ -256,39 +251,28 @@ export default {
             this.selected.Name = this.title;
             this.selected.editable = false;
             this.selected.writable = false;
-            this.selected = "";
-            this.saveXml();
+            this.selected = {};
         },
         saveXml() {
             invoke("wftp_xml_string", {
                 xmlString: JSON.stringify(this.treeData[0].children),
             }).then((response) => {
                 localStorage.setItem("wftp_server", response);
+                this.refreshWftpServer();
             });
         },
         getWftpServer() {
-            invoke("get_wftp_server", { wftpXml: localStorage.getItem("wftp_server") }).then(
-                (response) => {
-                    let temp = {};
-                    temp.Name = "我的站点";
-                    temp.key = "0";
-                    temp.children = [];
-                    response.map((elem, index) => {
-                        temp.children.push({
-                            Name: elem.Name,
-                            key: temp.key + "-" + index,
-                            Host: elem.Host,
-                            User: elem.User,
-                            Pass: elem.Pass,
-                            Port: elem.Port,
-                            Protocol: elem.Protocol,
-                            LogonType: elem.LogonType,
-                        });
-                    });
-                    this.treeData = [temp];
-                    store.state.wftpServer = response;
-                }
-            );
+            let temp = {};
+            temp.Name = "我的站点";
+            temp.key = "0";
+            temp.children = [];
+            store.state.wftpServer.map((elem, index) => {
+                temp.children.push({
+                    ...elem,
+                    key: temp.key + "-" + index,
+                });
+            });
+            this.treeData = [temp];
         },
         newLeaf() {
             this.title = "新站点";
@@ -297,11 +281,12 @@ export default {
                 Name: "新站点",
                 editable: false,
                 writable: true,
-                Protocol: "1",
-                LogonType: "1",
+                Protocol: 1,
+                LogonType: 1,
             });
         },
         del() {
+            this.hasSelected = false;
             this.treeData[0].children.map((elem, key) => {
                 if (elem.key == this.selectedKey[0]) {
                     this.treeData[0].children.splice(key, 1);
@@ -311,6 +296,12 @@ export default {
         },
         copy() {
             this.title = this.selected.Name;
+            this.host = this.selected.Host;
+            this.port = this.selected.Port;
+            this.user = this.selected.User;
+            this.pass = this.selected.Pass;
+            this.loginType = this.loginTypes[this.selected.LogonType];
+            this.protocol = this.protocols[this.selected.Protocol];
             this.treeData[0].children.push({
                 key: "0-" + this.treeData[0].children.length,
                 Name: this.selected.Name,
@@ -324,14 +315,28 @@ export default {
             event.target.select();
         },
         handleOk() {
-            this.modelVisible = false;
-            this.selected.Host = this.host;
-            this.selected.Port = this.port;
-            this.selected.User = this.user;
-            this.selected.Pass = this.pass;
-            this.selected.Protocol = this.protocol;
-            this.selected.LogonType = this.loginType;
-            this.saveXml();
+            let protocol;
+            let loginType;
+            this.protocols.map((elem, index) => {
+                if (elem == this.protocol) {
+                    protocol = index
+                }
+            })
+            this.loginTypes.map((elem, index) => {
+                if (elem == this.loginType) {
+                    loginType = index
+                }
+            })
+            this.modalVisible = false;
+            if (this.hasSelected) {
+                this.selected.Host = this.host;
+                this.selected.Port = this.port;
+                this.selected.User = this.user;
+                this.selected.Pass = this.pass;
+                this.selected.Protocol = protocol;
+                this.selected.LogonType = loginType;
+                this.saveXml();
+            }
         },
         handleLink() {
             let key = store.state.panes.length != 0 ? store.state.panes.length + 1 : 1
@@ -365,7 +370,7 @@ export default {
             hasSelected: false,
             selectedKey: [],
             title: "",
-            selected: "",
+            selected: {},
             protocol: "FTP - 文件传输协议",
             protocols: ["SFTP - SSH FILE Transfer Protocol", "FTP - 文件传输协议"],
             loginType: "正常",
