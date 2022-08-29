@@ -9,12 +9,18 @@
     <a-col style="min-width: 100px !important; width: 100%">
       <div>
         <a-input :value="currentPath" addon-before="远程站点：" />
-        <a-tree style="
+        <a-tree
+          style="
             overflow-y: auto;
             max-height: 100px !important;
             min-height: 100px !important;
-          " :default-expanded-keys="['0']" :show-line="true" :tree-data="treeData" @select="onSelect"
-          :showIcon="false">
+          "
+          :default-expanded-keys="['0']"
+          :show-line="true"
+          :tree-data="treeData"
+          @select="onSelect"
+          :showIcon="false"
+        >
           <template #title="{ dataRef }">
             {{ dataRef.title }}
           </template>
@@ -22,19 +28,39 @@
       </div>
     </a-col>
   </a-row>
-  <a-row style="min-height: 300px !important;  overflow: auto" class="remoteTable">
+  <a-row
+    style="min-height: 300px !important; max-height: 300px !important; overflow: auto"
+    class="remoteTable"
+  >
     <a-col style="">
-      <a-table :customHeaderRow="customHeaderRow" v-mouse-menu="options" :columns="columns" :data-source="dataSource"
-        :pagination="false" :customRow="customRow" :scroll="{ x: 800 }">
+      <a-table
+        :customHeaderRow="customHeaderRow"
+        v-mouse-menu="options"
+        :columns="columns"
+        :data-source="dataSource"
+        :pagination="false"
+        :customRow="customRow"
+        :scroll="{ x: 800 }"
+      >
         <template #bodyCell="{ column, text }">
           <template v-if="column.dataIndex === 'name'">
-            <folder-open-outlined :style="{ color: '#ffe896' }" v-if="text.kind === 'folder'" />
+            <folder-open-outlined
+              :style="{ color: '#ffe896' }"
+              v-if="text.kind === 'folder'"
+            />
             <file-outlined v-else />
-            <a-input class="showInput" v-if="text.showInput" v-model:value="toName" :bordered="false" placeholder=""
-              @pressEnter.prevent="renameInput" @focus.prevent="handleFocus"
-              style="display: inline-block; width: 80px" />
+            <a-input
+              class="showInput"
+              v-if="text.showInput"
+              v-model:value="toName"
+              :bordered="false"
+              placeholder=""
+              @pressEnter.prevent="renameInput"
+              @focus.prevent="handleFocus"
+              style="display: inline-block; width: 80px"
+            />
             <text v-else :title="text.name">{{
-                text.name.length > 20 ? text.name.slice(0, 20) + "..." : text.name
+              text.name.length > 20 ? text.name.slice(0, 20) + "..." : text.name
             }}</text>
           </template>
         </template>
@@ -53,6 +79,7 @@ import { invoke } from "@tauri-apps/api";
 import { MouseMenuDirective } from "@howdyjs/mouse-menu";
 import { createVNode } from "vue";
 import { Modal } from "ant-design-vue";
+import { connect, readdir, getTree, cwd, prev } from "../apis/index";
 export default {
   props: {
     state: Boolean,
@@ -225,7 +252,7 @@ export default {
           {
             label: "文件权限",
             tips: "Permissions",
-            fn: () => { },
+            fn: () => {},
           },
         ],
       },
@@ -285,20 +312,7 @@ export default {
   mounted() {
     if (this.data) {
       store.state.stateList.push("状态：正在连接" + this.data.Name);
-      invoke("connect", {
-        name: this.data.Name,
-        addr: this.data.Host + ":" + this.data.Port,
-        username: this.data.User,
-        password: this.data.Pass,
-      }).then((response) => {
-        let res = JSON.parse(response);
-        if (res.code == 200) {
-          store.state.connected = true;
-        }
-        store.state.stateList.push("响应：" + res.msg);
-      }).catch((err) => {
-        store.state.stateList.push("响应：" + err);
-      });
+      connect();
     }
     this.$watch(
       () => {
@@ -319,12 +333,9 @@ export default {
         document
           .querySelectorAll("tr")
           .forEach((elem) => elem.classList.remove("selected"));
-        invoke("list", {
-          name: this.data.Name,
-          path: this.currentPath,
-        }).then((response) => {
-          store.state.stateList.push("状态：列出“" + this.currentPath + "”的目录成功");
+        readdir(this.currentPath).then((response) => {
           this.dataSource = response;
+          store.state.stateList.push("状态：列出“" + this.currentPath + "”的目录成功");
         });
       }
     },
@@ -355,17 +366,23 @@ export default {
           this.prevPath += prevPath;
           if (record.name.name != "..") {
             this.currentPath = record.name.name;
-            invoke("cwd", {
-              name: this.data.Name,
-              path: this.currentPath,
-            }).then((response) => {
+            // invoke("cwd", {
+            //   name: this.data.Name,
+            //   path: this.currentPath,
+            // }).then((response) => {
+            //   store.state.stateList.push("状态：" + response);
+            // });
+            cwd(this.currentPath).then((response) => {
               store.state.stateList.push("状态：" + response);
             });
           } else {
             this.currentPath = this.prevPath;
-            invoke("prev", {
-              name: this.data.Name,
-            }).then((response) => {
+            // invoke("prev", {
+            //   name: this.data.Name,
+            // }).then((response) => {
+            //   store.state.stateList.push("状态：" + response);
+            // });
+            prev().then((response) => {
               store.state.stateList.push("状态：" + response);
             });
           }
@@ -406,7 +423,7 @@ export default {
       event.target.select();
     },
     getTreeData() {
-      invoke("folder_list", { name: this.data.Name }).then((response) => {
+      getTree().then((response) => {
         this.treeData = [response];
       });
     },
@@ -454,14 +471,14 @@ export default {
   font-size: 10px !important;
 }
 
-.ant-table-thead>tr>th,
-.ant-table-tbody>tr>td,
-.ant-table tfoot>tr>th,
-.ant-table tfoot>tr>td {
+.ant-table-thead > tr > th,
+.ant-table-tbody > tr > td,
+.ant-table tfoot > tr > th,
+.ant-table tfoot > tr > td {
   padding: 2px 5px !important;
 }
 
-.ant-table-container table>thead>tr:first-child th {
+.ant-table-container table > thead > tr:first-child th {
   font-weight: bolder;
 }
 

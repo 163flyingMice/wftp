@@ -61,7 +61,7 @@ npm run tauri:build
     - [ ] 字符集
 
 ### SFTP协议支持  
-- [ ] 暂无
+  - [x] 支持多个连接  
 ### Storj协议支持  
 - [ ] 暂无
 

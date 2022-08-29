@@ -19,8 +19,9 @@ use remote::{
 };
 use tauri::generate_context;
 
+use crate::sftp::{readdir, sftp_connect, sftp_cwd, sftp_folder_list, sftp_prev};
+
 fn main() {
-    sftp::connect();
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             try_connect,
@@ -43,7 +44,12 @@ fn main() {
             get_file_size,
             get_file_modified,
             quit,
-            size_sort
+            size_sort,
+            readdir,
+            sftp_connect,
+            sftp_folder_list,
+            sftp_prev,
+            sftp_cwd
         ])
         .menu(menu::init())
         .on_menu_event(menu::handler)

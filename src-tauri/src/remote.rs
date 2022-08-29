@@ -15,7 +15,7 @@ pub struct FolderTree {
 }
 
 impl FolderTree {
-    fn new() -> Self {
+    pub fn new() -> Self {
         FolderTree {
             title: String::from("/"),
             key: String::from("0"),
@@ -26,7 +26,7 @@ impl FolderTree {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FolderLeaf {
-    pub title: String,
+    pub title: Option<String>,
     pub key: String,
 }
 
@@ -49,7 +49,7 @@ lazy_static! {
 }
 
 impl FileList {
-    fn new() -> Self {
+    pub fn new() -> Self {
         let mut name = HashMap::new();
         name.insert(String::from("kind"), String::from("folder"));
         name.insert(String::from("name"), String::from(".."));
@@ -85,11 +85,11 @@ pub fn alive(name: String) -> String {
 }
 
 #[tauri::command]
-pub fn connect(addr: String, username: String, password: String, name: String) -> String {
+pub fn connect(addr: String, user: String, pass: String, name: String) -> String {
     let mut ftp_stream;
     if let Ok(t) = FtpStream::connect(&addr) {
         ftp_stream = t;
-        let _ = ftp_stream.login(&username, &password);
+        let _ = ftp_stream.login(&user, &pass);
         OWNER_FTP_STREAM
             .lock()
             .unwrap()
@@ -233,7 +233,7 @@ pub fn folder_list(name: String) -> Option<FolderTree> {
                     .collect::<Vec<String>>();
                 let temp_len = temp.len();
                 folder_leaf.push(FolderLeaf {
-                    title: temp.iter().nth(temp_len - 1).unwrap().to_string(),
+                    title: Some(temp.iter().nth(temp_len - 1).unwrap().to_string()),
                     key: String::from(String::from("0-") + &(num.clone().to_string())),
                 });
                 num += 1;

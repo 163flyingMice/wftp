@@ -1,36 +1,51 @@
 <template>
   <a-tabs tab-position="bottom" type="card">
     <a-tab-pane key="1" tab="列队的文件" :border="false">
-      <a-table :columns="lineFileHeader" :data-source="transfeList" :pagination="false" :scroll="{ x: 800 }"
-        class="overflowTable">
+      <a-table
+        :columns="lineFileHeader"
+        :data-source="transfeList"
+        :pagination="false"
+        :scroll="{ x: 800 }"
+        class="overflowTable"
+      >
       </a-table>
     </a-tab-pane>
     <a-tab-pane key="2" tab="传输失败">
-      <a-table :columns="failedTransfeHeader" :data-source="transfeList" :pagination="false" :scroll="{ x: 800 }"
-        class="overflowTable">
+      <a-table
+        :columns="failedTransfeHeader"
+        :data-source="transfeList"
+        :pagination="false"
+        :scroll="{ x: 800 }"
+        class="overflowTable"
+      >
       </a-table>
     </a-tab-pane>
     <a-tab-pane key="3" tab="成功的传输">
-      <a-table :columns="successTransfeHeader" :data-source="transfeList" :pagination="false" :scroll="{ x: 800 }"
-        class="overflowTable">
+      <a-table
+        :columns="successTransfeHeader"
+        :data-source="transfeList"
+        :pagination="false"
+        :scroll="{ x: 800 }"
+        class="overflowTable"
+      >
       </a-table>
     </a-tab-pane>
   </a-tabs>
 </template>
 
 <script>
-import store from '@/store';
+import store from "@/store";
 
 export default {
   computed: {
     transfeList: {
       get() {
-        return store.state.transfeList
+        return store.state.transfeList;
       },
       set(value) {
-        store.state.transfeList = value
-      }
-    }
+        store.state.transfeList = value;
+      },
+    },
   },
   data() {
     return {
@@ -174,8 +189,8 @@ export default {
 }
 
 .overflowTable {
-  min-height: 180px;
-  max-height: 180px;
+  min-height: 150px;
+  max-height: 150px;
   overflow-y: auto;
 }
 </style>
