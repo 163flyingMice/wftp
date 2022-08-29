@@ -1,3 +1,4 @@
+use chrono::{TimeZone, Utc};
 use ssh2::{FileStat, Session, Sftp};
 use std::collections::HashMap;
 use std::net::TcpStream;
@@ -69,9 +70,14 @@ pub fn readdir(name: String) -> Option<Vec<FileList>> {
                     title = filename.to_string();
                 }
             }
+            let mut size = file_stat.size.unwrap() as usize;
+            let is_directory: String;
             if file_stat.is_dir() {
+                size = 0;
+                is_directory = String::from("文件夹");
                 name.insert(String::from("kind"), String::from("folder"));
             } else {
+                is_directory = String::from("文件");
                 let temp: String;
                 if let Some(ext) = elem.0.clone().extension() {
                     temp = ext.to_str().unwrap().to_string() + " 文件";
@@ -100,9 +106,9 @@ pub fn readdir(name: String) -> Option<Vec<FileList>> {
                 permissions: file_stat.perm.unwrap().to_string(),
                 owner: file_stat.uid.unwrap().to_string(),
                 group: file_stat.gid.unwrap().to_string(),
-                size: file_stat.size.unwrap() as usize,
-                update_at: file_stat.mtime.unwrap().to_string(),
-                is_directory: file_stat.is_file().to_string(),
+                size: size,
+                update_at: get_format_time(file_stat.mtime.unwrap() as i64 + 28800),
+                is_directory: is_directory,
                 name: name,
             })
         }
@@ -110,6 +116,11 @@ pub fn readdir(name: String) -> Option<Vec<FileList>> {
     } else {
         None
     }
+}
+
+fn get_format_time(ms: i64) -> String {
+    let dt = Utc.timestamp(ms, 0);
+    format!("{}", dt.format("%Y/%m/%d %H:%M:%S"))
 }
 
 #[tauri::command]
@@ -256,7 +267,7 @@ pub fn sftp_prev(name: String) -> String {
             let mut extens: Vec<&str> = sftp.current_path.split("/").collect();
             extens.pop();
             let path = extens.join("/").to_string();
-            sftp.current_path = sftp.current_path.as_mut().to_string() + &path;
+            sftp.current_path = path;
             return String::from("更改文件夹成功！");
         }
     }
