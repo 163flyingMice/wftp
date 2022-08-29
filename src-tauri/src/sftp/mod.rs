@@ -80,8 +80,17 @@ pub fn readdir(name: String) -> Option<Vec<FileList>> {
                 }
                 name.insert(String::from("kind"), temp);
             }
-            println!("{:?}", elem.0.clone().to_str().unwrap().to_string());
-            println!("{}", title);
+            if title == "" {
+                let temp_name = elem
+                    .0
+                    .to_str()
+                    .unwrap()
+                    .split("\\")
+                    .map(|s| s.to_string())
+                    .collect::<Vec<String>>();
+                let temp_len = temp_name.len();
+                title = temp_name.iter().nth(temp_len - 1).unwrap().to_string();
+            }
             name.insert(String::from("name"), title);
             name.insert(
                 String::from("path"),
