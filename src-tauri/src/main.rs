@@ -11,6 +11,7 @@ pub mod menu;
 pub mod remote;
 pub mod result;
 pub mod sftp;
+pub mod util;
 use config::{get_default_wftp, get_wftp_server, wftp_xml_string};
 use local::{get_file_modified, get_file_size};
 use remote::{
@@ -19,7 +20,10 @@ use remote::{
 };
 use tauri::generate_context;
 
-use crate::sftp::{readdir, sftp_connect, sftp_cwd, sftp_folder_list, sftp_prev};
+use crate::sftp::{
+    readdir, sftp_connect, sftp_create, sftp_cwd, sftp_folder_list, sftp_mkdir, sftp_prev,
+    sftp_pwd, sftp_rename, sftp_rmdir, sftp_unlink,
+};
 
 fn main() {
     tauri::Builder::default()
@@ -49,7 +53,13 @@ fn main() {
             sftp_connect,
             sftp_folder_list,
             sftp_prev,
-            sftp_cwd
+            sftp_cwd,
+            sftp_pwd,
+            sftp_rename,
+            sftp_mkdir,
+            sftp_create,
+            sftp_rmdir,
+            sftp_unlink,
         ])
         .menu(menu::init())
         .on_menu_event(menu::handler)

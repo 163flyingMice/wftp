@@ -223,7 +223,7 @@
       </a-layout>
     </a-layout>
     <template #footer>
-      <a-button @click="handleLink">连接</a-button>
+      <a-button @click="handleLink" :disabled="!hasSelected">连接</a-button>
       <a-button @click="handleOk">确定</a-button>
       <a-button @click="modalVisible = false">取消</a-button>
     </template>
@@ -234,6 +234,7 @@
 import store from "@/store/index";
 import { invoke } from "@tauri-apps/api";
 import { PlusSquareOutlined } from "@ant-design/icons-vue";
+import { Modal } from "ant-design-vue";
 
 export default {
   props: {
@@ -277,7 +278,6 @@ export default {
       this.selected.Name = this.title;
       this.selected.editable = false;
       this.selected.writable = false;
-      this.selected = {};
     },
     saveXml() {
       invoke("wftp_xml_string", {
@@ -333,8 +333,8 @@ export default {
         Name: this.selected.Name,
         editable: false,
         writable: true,
-        Protocol: "1",
-        LogonType: "1",
+        Protocol: 1,
+        LogonType: 1,
       });
     },
     handleFocus(event) {
@@ -365,21 +365,36 @@ export default {
       }
     },
     handleLink() {
-      let key = store.state.panes.length != 0 ? store.state.panes.length + 1 : 1;
-      store.state.panes.push({
-        title: this.selected.Name,
-        key: key,
-        data: {
-          Host: this.host,
-          User: this.user,
-          Pass: this.pass,
-          Port: this.port,
-          Name: this.selected.Name,
-          Protocol: this.selected.Protocol,
-        },
-      });
-      this.modalVisible = false;
-      store.state.listActiveKey = key;
+      if (this.host && this.user && this.pass && this.port && this.protocol) {
+        let protocol;
+        this.protocols.map((elem, index) => {
+          if (elem == this.protocol) {
+            protocol = index;
+          }
+        });
+        let key = store.state.panes.length != 0 ? store.state.panes.length + 1 : 1;
+        store.state.panes.push({
+          title: this.selected.Name,
+          key: key,
+          data: {
+            Host: this.host,
+            User: this.user,
+            Pass: this.pass,
+            Port: this.port,
+            Name: this.selected.Name,
+            Protocol: protocol,
+          },
+        });
+        this.modalVisible = false;
+        store.state.listActiveKey = key;
+        this.handleOk();
+      } else {
+        console.log(this.protocol);
+        Modal.error({
+          title: "连接错误提示",
+          content: "请完成全部信息填写！",
+        });
+      }
     },
   },
   computed: {

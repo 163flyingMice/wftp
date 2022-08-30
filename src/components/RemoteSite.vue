@@ -8,13 +8,19 @@
   <a-row v-show="state">
     <a-col style="min-width: 100px !important; width: 100%">
       <div>
-        <a-input :value="currentPath" addon-before="远程站点：" />
-        <a-tree style="
+        <a-input :value="remotePath" addon-before="远程站点：" />
+        <a-tree
+          style="
             overflow-y: auto;
             max-height: 100px !important;
             min-height: 100px !important;
-          " :default-expanded-keys="['0']" :show-line="true" :tree-data="treeData" @select="onSelect"
-          :showIcon="false">
+          "
+          :default-expanded-keys="['0']"
+          :show-line="true"
+          :tree-data="treeData"
+          @select="onSelect"
+          :showIcon="false"
+        >
           <template #title="{ dataRef }">
             {{ dataRef.title }}
           </template>
@@ -22,19 +28,39 @@
       </div>
     </a-col>
   </a-row>
-  <a-row style="min-height: 300px !important; max-height: 300px !important; overflow: auto" class="remoteTable">
+  <a-row
+    style="min-height: 300px !important; max-height: 300px !important; overflow: auto"
+    class="remoteTable"
+  >
     <a-col style="">
-      <a-table :customHeaderRow="customHeaderRow" v-mouse-menu="options" :columns="columns" :data-source="dataSource"
-        :pagination="false" :customRow="customRow" :scroll="{ x: 800 }">
+      <a-table
+        :customHeaderRow="customHeaderRow"
+        v-mouse-menu="options"
+        :columns="columns"
+        :data-source="dataSource"
+        :pagination="false"
+        :customRow="customRow"
+        :scroll="{ x: 800 }"
+      >
         <template #bodyCell="{ column, text }">
           <template v-if="column.dataIndex === 'name'">
-            <folder-open-outlined :style="{ color: '#ffe896' }" v-if="text.kind === 'folder'" />
+            <folder-open-outlined
+              :style="{ color: '#ffe896' }"
+              v-if="text.kind === 'folder'"
+            />
             <file-outlined v-else />
-            <a-input class="showInput" v-if="text.showInput" v-model:value="toName" :bordered="false" placeholder=""
-              @pressEnter.prevent="renameInput" @focus.prevent="handleFocus"
-              style="display: inline-block; width: 80px" />
+            <a-input
+              class="showInput"
+              v-if="text.showInput"
+              v-model:value="toName"
+              :bordered="false"
+              placeholder=""
+              @pressEnter.prevent="renameInput"
+              @focus.prevent="handleFocus"
+              style="display: inline-block; width: 80px"
+            />
             <text v-else :title="text.name">{{
-                text.name.length > 20 ? text.name.slice(0, 20) + "..." : text.name
+              text.name.length > 20 ? text.name.slice(0, 20) + "..." : text.name
             }}</text>
           </template>
         </template>
@@ -49,11 +75,23 @@ import {
   FolderOpenOutlined,
   ExclamationCircleOutlined,
 } from "@ant-design/icons-vue";
-import { invoke } from "@tauri-apps/api";
 import { MouseMenuDirective } from "@howdyjs/mouse-menu";
 import { createVNode } from "vue";
 import { Modal } from "ant-design-vue";
-import { connect, readdir, getTree, cwd, prev } from "../apis/index";
+import {
+  connect,
+  readdir,
+  getTree,
+  cwd,
+  prev,
+  create,
+  unlink,
+  rmdir,
+  mk_dir,
+  rename_file,
+  pwd,
+  size_sort,
+} from "../apis/index";
 export default {
   props: {
     state: Boolean,
@@ -128,7 +166,7 @@ export default {
             fn: () => {
               this.visible = true;
               this.modalTitle = "创建目录";
-              this.value = "/" + this.selected.name + "/创建目录";
+              this.value = "/" + this.selected.name + "/new folder";
             },
           },
           {
@@ -136,7 +174,7 @@ export default {
             tips: "Put",
             fn: () => {
               this.visible = true;
-              this.value = "/" + this.selected.name + "/创建文件名";
+              this.value = "/" + this.selected.name + "/new file";
               this.modalTitle = "创建文件";
             },
           },
@@ -158,27 +196,27 @@ export default {
               Modal.confirm({
                 title: "需要确认",
                 icon: createVNode(ExclamationCircleOutlined),
-                content: "确认要从服务器删除一个文件吗？",
+                content: "确认要从服务器删除吗？",
                 okText: "确认",
                 cancelText: "取消",
                 onOk: () => {
                   switch (this.selected.kind) {
                     case "folder":
-                      invoke("remove_dir", {
-                        name: this.data.Name,
-                        path: this.selected.name,
-                      }).then((response) => {
-                        store.state.stateList.push("响应：" + response);
-                        this.getData();
+                      rmdir(this.selected.name).then((response) => {
+                        let res = JSON.parse(response);
+                        if (res.code == 200) {
+                          store.state.stateList.push("响应：" + res.msg);
+                          this.getData();
+                        }
                       });
                       break;
                     default:
-                      invoke("remove_file", {
-                        name: this.data.Name,
-                        filename: this.selected.name,
-                      }).then((response) => {
-                        store.state.stateList.push("响应：" + response);
-                        this.getData();
+                      unlink(this.selected.name).then((response) => {
+                        let res = JSON.parse(response);
+                        if (res.code == 200) {
+                          store.state.stateList.push("响应：" + res.msg);
+                          this.getData();
+                        }
                       });
                       break;
                   }
@@ -203,9 +241,7 @@ export default {
             tips: "Copy",
             fn: () => {
               store.state.stateList.push("命令：复制URL");
-              invoke("pwd", {
-                name: this.data.Name,
-              }).then((response) => {
+              pwd().then((response) => {
                 let text = response + this.selected.name;
                 if (response !== "/") {
                   text = response + "/" + this.selected.name;
@@ -223,10 +259,11 @@ export default {
           {
             label: "文件权限",
             tips: "Permissions",
-            fn: () => { },
+            fn: () => {},
           },
         ],
       },
+      remotePath: "/",
       treeData: [],
       sortWay: true,
       prevPath: "/",
@@ -281,6 +318,7 @@ export default {
     };
   },
   mounted() {
+    store.state.connected = false;
     if (this.data) {
       store.state.stateList.push("状态：正在连接" + this.data.Name);
       connect();
@@ -300,13 +338,17 @@ export default {
   methods: {
     getData() {
       if (store.state.connected) {
+        pwd().then((response) => {
+          this.remotePath = response;
+        });
+        store.state.stateList.push("命令：列出“" + this.remotePath + "”的目录");
         this.getTreeData();
         document
           .querySelectorAll("tr")
           .forEach((elem) => elem.classList.remove("selected"));
         readdir(this.currentPath).then((response) => {
           this.dataSource = response;
-          store.state.stateList.push("状态：列出“" + this.currentPath + "”的目录成功");
+          store.state.stateList.push("响应：列出“" + this.remotePath + "”的目录成功");
         });
       }
     },
@@ -319,10 +361,7 @@ export default {
             event.target.innerText == "文件大小"
           ) {
             let first = this.dataSource.shift();
-            invoke("size_sort", {
-              fileList: this.dataSource,
-              sortWay: this.sortWay,
-            }).then((response) => {
+            size_sort(this.dataSource, this.sortWay).then((response) => {
               this.dataSource = [].concat(first, response);
             });
           }
@@ -365,19 +404,18 @@ export default {
           document
             .querySelectorAll("tr")
             .forEach((elem) => elem.classList.remove("selected"));
-          event.target.parentElement.className = "selected";
+          event.target.parentNode.classList.add("selected");
         },
       };
     },
     renameInput() {
-      invoke("rename_file", {
-        name: this.data.Name,
-        fromName: this.fromName,
-        toName: this.toName,
-      }).then((response) => {
-        store.state.stateList.push("响应：" + response);
+      rename_file(this.fromName, this.toName).then((response) => {
+        let res = JSON.parse(response);
+        if (res.code == 200) {
+          store.state.stateList.push("响应：" + res.msg);
+          this.getData();
+        }
       });
-      this.getData();
     },
     handleFocus(event) {
       event.target.select();
@@ -391,22 +429,19 @@ export default {
       switch (this.modalTitle) {
         case "创建文件":
           store.state.stateList.push("命令：创建文件" + this.value);
-          invoke("mk_file", {
-            name: this.data.Name,
-            filename: this.value,
-          }).then((response) => {
+          create(this.value).then((response) => {
             store.state.stateList.push("响应：" + response);
             this.getData();
           });
           break;
         default:
           store.state.stateList.push("命令：创建文件夹" + this.value);
-          invoke("mk_dir", {
-            name: this.data.Name,
-            path: this.value,
-          }).then((response) => {
-            store.state.stateList.push("响应：" + response);
-            this.getData();
+          mk_dir(this.value).then((response) => {
+            let res = JSON.parse(response);
+            if (res.code == 200) {
+              store.state.stateList.push("响应：" + res.msg);
+              this.getData();
+            }
           });
           break;
       }
@@ -431,23 +466,23 @@ export default {
   font-size: 10px !important;
 }
 
-.ant-table-thead>tr>th,
-.ant-table-tbody>tr>td,
-.ant-table tfoot>tr>th,
-.ant-table tfoot>tr>td {
+.ant-table-thead > tr > th,
+.ant-table-tbody > tr > td,
+.ant-table tfoot > tr > th,
+.ant-table tfoot > tr > td {
   padding: 2px 5px !important;
 }
 
-.ant-table-container table>thead>tr:first-child th {
+.ant-table-container table > thead > tr:first-child th {
   font-weight: bolder;
 }
 
-.selected {
+tr.selected {
   background-color: #1890ff;
 }
 
 .ant-table-cell-row-hover {
-  background-color: white !important;
+  background-color: white;
 }
 
 .remoteTable .ant-table-content {

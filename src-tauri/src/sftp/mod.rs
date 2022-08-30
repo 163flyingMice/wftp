@@ -1,4 +1,3 @@
-use chrono::{TimeZone, Utc};
 use ssh2::{FileStat, Session, Sftp};
 use std::collections::HashMap;
 use std::net::TcpStream;
@@ -7,6 +6,7 @@ use std::sync::Mutex;
 
 use crate::remote::{FileList, FolderLeaf, FolderTree};
 use crate::result::{CustomError, Error, Success, CONNECTED_SUCCESS_CODE, DISCONNECTED_ERROR_CODE};
+use crate::util::{get_format_time, get_snow_id};
 
 pub struct SftpStruct {
     sftp: Option<Sftp>,
@@ -21,33 +21,38 @@ lazy_static! {
 }
 
 #[tauri::command]
-pub fn sftp_connect(name: String, addr: String, user: String, pass: String) -> String {
-    let tcp = TcpStream::connect(addr).unwrap();
-    let mut sess = Session::new().unwrap();
-    sess.set_tcp_stream(tcp);
-    sess.handshake().unwrap();
-    if let Ok(_) = sess.userauth_password(&user, &pass) {
-        let sftp = sess.sftp().unwrap();
-        let sftp_struct = SftpStruct {
-            sftp: Some(sftp),
-            current_path: String::from("/"),
-        };
-        SFTP_VEC
-            .lock()
-            .unwrap()
-            .insert(name.to_string(), Some(sftp_struct));
-        serde_json::to_string(&Success::new(
-            CONNECTED_SUCCESS_CODE,
-            String::from("连接成功！"),
-            (),
-        ))
-        .unwrap()
-    } else {
-        serde_json::to_string(&Error::new(
-            DISCONNECTED_ERROR_CODE,
-            CustomError::GetFtpstreamError.to_string(),
-        ))
-        .unwrap()
+pub fn sftp_connect(addr: String, user: String, pass: String) -> String {
+    match TcpStream::connect(addr) {
+        Ok(tcp) => {
+            let mut sess = Session::new().unwrap();
+            sess.set_tcp_stream(tcp);
+            sess.handshake().unwrap();
+            if let Ok(_) = sess.userauth_password(&user, &pass) {
+                let sftp = sess.sftp().unwrap();
+                let sftp_struct = SftpStruct {
+                    sftp: Some(sftp),
+                    current_path: String::from("/"),
+                };
+                let snow_id = get_snow_id();
+                SFTP_VEC
+                    .lock()
+                    .unwrap()
+                    .insert(snow_id.clone(), Some(sftp_struct));
+                serde_json::to_string(&Success::new(
+                    CONNECTED_SUCCESS_CODE,
+                    String::from("连接成功！"),
+                    snow_id.clone(),
+                ))
+                .unwrap()
+            } else {
+                serde_json::to_string(&Error::new(
+                    DISCONNECTED_ERROR_CODE,
+                    CustomError::GetFtpstreamError.to_string(),
+                ))
+                .unwrap()
+            }
+        }
+        Err(err) => serde_json::to_string(&Error::new(400, err.to_string())).unwrap(),
     }
 }
 
@@ -102,6 +107,11 @@ pub fn readdir(name: String) -> Option<Vec<FileList>> {
                 String::from("path"),
                 elem.0.clone().to_str().unwrap().to_string(),
             );
+            let temp_perm = format!("{:o}", file_stat.perm.unwrap());
+            let perm_g = &temp_perm[(temp_perm.len() - 1)..];
+            let perm_o = &temp_perm[(temp_perm.len() - 2)..(temp_perm.len() - 1)];
+            let perm_other = &temp_perm[(temp_perm.len() - 3)..(temp_perm.len() - 2)];
+            println!("{},{},{}", perm_g, perm_o, perm_other);
             file_list.push(FileList {
                 permissions: file_stat.perm.unwrap().to_string(),
                 owner: file_stat.uid.unwrap().to_string(),
@@ -118,99 +128,152 @@ pub fn readdir(name: String) -> Option<Vec<FileList>> {
     }
 }
 
-fn get_format_time(ms: i64) -> String {
-    let dt = Utc.timestamp(ms, 0);
-    format!("{}", dt.format("%Y/%m/%d %H:%M:%S"))
-}
-
 #[tauri::command]
-pub fn rmdir(name: String, path: String) -> String {
-    if let Some(sftp) = SFTP_VEC.lock().unwrap().get_mut(&name).unwrap() {
-        let _ = sftp.sftp.as_mut().unwrap().rmdir(Path::new(&path)).unwrap();
-        return serde_json::to_string(&Success::new(200, String::from("删除文件夹成功！"), ()))
-            .unwrap();
-    } else {
-        return serde_json::to_string(&Error::new(502, String::from("删除文件夹失败！"))).unwrap();
+pub fn sftp_rmdir(name: String, mut path: String) -> String {
+    if let Some(temp) = SFTP_VEC.lock().unwrap().get_mut(&name) {
+        if let Some(sftp) = temp {
+            if sftp.current_path != "/" {
+                path = sftp.current_path.as_mut().to_string() + "/" + &path;
+            } else {
+                path = sftp.current_path.as_mut().to_string() + &path;
+            }
+            let _ = sftp.sftp.as_mut().unwrap().rmdir(Path::new(&path)).unwrap();
+            return serde_json::to_string(&Success::new(200, String::from("删除文件夹成功！"), ()))
+                .unwrap();
+        }
     }
+    return serde_json::to_string(&Error::new(502, String::from("删除文件夹失败！"))).unwrap();
 }
 
 #[tauri::command]
-pub fn unlink(name: String, path: String) -> String {
-    if let Some(sftp) = SFTP_VEC.lock().unwrap().get_mut(&name).unwrap() {
-        let _ = sftp
-            .sftp
-            .as_mut()
-            .unwrap()
-            .unlink(Path::new(&path))
-            .unwrap();
-        return serde_json::to_string(&Success::new(200, String::from("删除文件成功！"), ()))
-            .unwrap();
-    } else {
-        return serde_json::to_string(&Error::new(502, String::from("删除文件失败！"))).unwrap();
-    }
-}
-
-#[tauri::command]
-pub fn create(name: String, filename: String) -> String {
-    if let Some(sftp) = SFTP_VEC.lock().unwrap().get_mut(&name).unwrap() {
-        let _ = sftp.sftp.as_mut().unwrap().create(Path::new(&filename));
-        return serde_json::to_string(&Success::new(200, String::from("创建文件成功！"), ()))
-            .unwrap();
-    } else {
-        return serde_json::to_string(&Error::new(502, String::from("创建文件失败！"))).unwrap();
-    }
-}
-
-#[tauri::command]
-pub fn mkdir(name: String, filename: String) -> String {
-    if let Some(sftp) = SFTP_VEC.lock().unwrap().get_mut(&name).unwrap() {
-        let _ = sftp
-            .sftp
-            .as_mut()
-            .unwrap()
-            .mkdir(Path::new(&filename), 0600);
-        return serde_json::to_string(&Success::new(200, String::from("创建文件夹成功！"), ()))
-            .unwrap();
-    } else {
-        return serde_json::to_string(&Error::new(502, String::from("创建文件夹失败！"))).unwrap();
-    }
-}
-
-#[tauri::command]
-pub fn sftp_rename(name: String, from_name: String, to_name: String) -> String {
-    if let Some(sftp) = SFTP_VEC.lock().unwrap().get_mut(&name).unwrap() {
-        let _ =
-            sftp.sftp
+pub fn sftp_unlink(name: String, mut filename: String) -> String {
+    if let Some(temp) = SFTP_VEC.lock().unwrap().get_mut(&name) {
+        if let Some(sftp) = temp {
+            if sftp.current_path != "/" {
+                filename = sftp.current_path.as_mut().to_string() + "/" + &filename;
+            } else {
+                filename = sftp.current_path.as_mut().to_string() + &filename;
+            }
+            let _ = sftp
+                .sftp
                 .as_mut()
                 .unwrap()
-                .rename(Path::new(&from_name), Path::new(&to_name), None);
-        return serde_json::to_string(&Success::new(200, String::from("重命名成功！"), ()))
-            .unwrap();
-    } else {
-        return serde_json::to_string(&Error::new(502, String::from("重命名失败！"))).unwrap();
+                .unlink(Path::new(&filename))
+                .unwrap();
+            return serde_json::to_string(&Success::new(200, String::from("删除文件成功！"), ()))
+                .unwrap();
+        }
     }
+    return serde_json::to_string(&Error::new(502, String::from("删除文件失败！"))).unwrap();
+}
+
+#[tauri::command]
+pub fn sftp_create(name: String, filename: String) -> String {
+    if let Some(temp) = SFTP_VEC.lock().unwrap().get_mut(&name) {
+        if let Some(sftp) = temp {
+            match sftp.sftp.as_mut().unwrap().create(Path::new(&filename)) {
+                Ok(_) => {
+                    return serde_json::to_string(&Success::new(
+                        200,
+                        String::from("创建文件成功！"),
+                        (),
+                    ))
+                    .unwrap();
+                }
+                Err(err) => {
+                    return serde_json::to_string(&Success::new(400, err.to_string(), ())).unwrap();
+                }
+            }
+        }
+    }
+    return serde_json::to_string(&Error::new(502, String::from("创建文件失败！"))).unwrap();
+}
+
+#[tauri::command]
+pub fn sftp_mkdir(name: String, path: String) -> String {
+    if let Some(temp) = SFTP_VEC.lock().unwrap().get_mut(&name) {
+        if let Some(sftp) = temp {
+            match sftp.sftp.as_mut().unwrap().mkdir(Path::new(&path), 0600) {
+                Ok(_) => {
+                    return serde_json::to_string(&Success::new(
+                        200,
+                        String::from("创建文件夹成功！"),
+                        (),
+                    ))
+                    .unwrap();
+                }
+                Err(err) => {
+                    return serde_json::to_string(&Error::new(400, err.to_string())).unwrap();
+                }
+            }
+        }
+    }
+    return serde_json::to_string(&Error::new(502, String::from("创建文件夹失败！"))).unwrap();
+}
+
+#[tauri::command]
+pub fn sftp_rename(name: String, mut from_name: String, mut to_name: String) -> String {
+    if let Some(temp) = SFTP_VEC.lock().unwrap().get_mut(&name) {
+        if let Some(sftp) = temp {
+            if sftp.current_path != "/" {
+                from_name = sftp.current_path.as_mut().to_string() + "/" + &from_name;
+                to_name = sftp.current_path.as_mut().to_string() + "/" + &to_name;
+            } else {
+                from_name = sftp.current_path.as_mut().to_string() + &from_name;
+                to_name = sftp.current_path.as_mut().to_string() + &to_name;
+            }
+            match sftp.sftp.as_mut().unwrap().rename(
+                Path::new(&from_name),
+                Path::new(&to_name),
+                None,
+            ) {
+                Ok(_) => {
+                    return serde_json::to_string(&Success::new(
+                        200,
+                        String::from("重命名成功！"),
+                        (),
+                    ))
+                    .unwrap();
+                }
+                Err(err) => {
+                    return serde_json::to_string(&Error::new(400, err.to_string())).unwrap();
+                }
+            }
+        }
+    }
+    return serde_json::to_string(&Error::new(502, String::from("重命名失败！"))).unwrap();
 }
 
 #[tauri::command]
 pub fn sftp_set_stat(name: String, filename: String) -> String {
-    if let Some(sftp) = SFTP_VEC.lock().unwrap().get_mut(&name).unwrap() {
-        let _ = sftp.sftp.as_mut().unwrap().setstat(
-            Path::new(&filename),
-            FileStat {
-                size: None,
-                uid: None,
-                gid: None,
-                perm: None,
-                atime: None,
-                mtime: None,
-            },
-        );
-        return serde_json::to_string(&Success::new(200, String::from("修改文件属性成功！"), ()))
-            .unwrap();
-    } else {
-        return serde_json::to_string(&Error::new(502, String::from("修改文件属性失败！")))
-            .unwrap();
+    if let Some(temp) = SFTP_VEC.lock().unwrap().get_mut(&name) {
+        if let Some(sftp) = temp {
+            match sftp.sftp.as_mut().unwrap().setstat(
+                Path::new(&filename),
+                FileStat {
+                    size: None,
+                    uid: None,
+                    gid: None,
+                    perm: None,
+                    atime: None,
+                    mtime: None,
+                },
+            ) {
+                Ok(_) => {
+                    return serde_json::to_string(&Success::new(
+                        200,
+                        String::from("修改文件属性成功！"),
+                        (),
+                    ))
+                    .unwrap();
+                }
+                Err(err) => {
+                    return serde_json::to_string(&Success::new(400, err.to_string(), ())).unwrap();
+                }
+            }
+        }
     }
+    return serde_json::to_string(&Error::new(502, String::from("修改文件属性失败！"))).unwrap();
 }
 
 #[tauri::command]
@@ -233,6 +296,17 @@ pub fn sftp_folder_list(name: String) -> Option<FolderTree> {
                         title = Some(filename.to_string());
                     }
                 }
+                if title == None {
+                    let temp_name = elem
+                        .0
+                        .to_str()
+                        .unwrap()
+                        .split("\\")
+                        .map(|s| s.to_string())
+                        .collect::<Vec<String>>();
+                    let temp_len = temp_name.len();
+                    title = Some(temp_name.iter().nth(temp_len - 1).unwrap().to_string());
+                }
                 folder_leaf.push(FolderLeaf {
                     title: title,
                     key: String::from(String::from("0-") + &(num.clone().to_string())),
@@ -253,7 +327,11 @@ pub fn sftp_folder_list(name: String) -> Option<FolderTree> {
 pub fn sftp_cwd(name: String, path: String) -> String {
     if let Some(temp) = SFTP_VEC.lock().unwrap().get_mut(&name) {
         if let Some(sftp) = temp {
-            sftp.current_path = sftp.current_path.as_mut().to_string() + "/" + &path;
+            if sftp.current_path != "/" {
+                sftp.current_path = sftp.current_path.as_mut().to_string() + "/" + &path;
+            } else {
+                sftp.current_path = sftp.current_path.as_mut().to_string() + &path;
+            }
             return String::from("更改文件夹成功！");
         }
     }
@@ -264,12 +342,27 @@ pub fn sftp_cwd(name: String, path: String) -> String {
 pub fn sftp_prev(name: String) -> String {
     if let Some(temp) = SFTP_VEC.lock().unwrap().get_mut(&name) {
         if let Some(sftp) = temp {
-            let mut extens: Vec<&str> = sftp.current_path.split("/").collect();
-            extens.pop();
-            let path = extens.join("/").to_string();
-            sftp.current_path = path;
+            if sftp.current_path != "/" {
+                let mut extens: Vec<&str> = sftp.current_path.split("/").collect();
+                extens.pop();
+                let mut path = extens.join("/").to_string();
+                if path == "" {
+                    path = String::from("/");
+                }
+                sftp.current_path = path;
+            }
             return String::from("更改文件夹成功！");
         }
     }
     String::from("更改文件夹失败！")
+}
+
+#[tauri::command]
+pub fn sftp_pwd(name: String) -> Option<String> {
+    if let Some(temp) = SFTP_VEC.lock().unwrap().get_mut(&name) {
+        if let Some(sftp) = temp {
+            return Some(sftp.current_path.clone());
+        }
+    }
+    None
 }

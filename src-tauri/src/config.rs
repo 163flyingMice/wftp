@@ -1,9 +1,5 @@
 use quick_xml::{de::from_str, se::Serializer};
 use serde::{Deserialize, Serialize};
-use std::{
-    fs::OpenOptions,
-    io::{BufReader, Read},
-};
 
 #[derive(Debug, Deserialize, PartialEq, Default, Serialize)]
 #[serde(rename = "wftp", default)]
@@ -63,18 +59,31 @@ const XML_HEADER: &str = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
 
 #[tauri::command]
 pub fn get_default_wftp() -> Option<String> {
-    match OpenOptions::new().read(true).open("wftp.xml") {
-        Ok(file) => {
-            let mut buf_reader = BufReader::new(file);
-            let mut contents = String::new();
-            let _ = buf_reader.read_to_string(&mut contents);
-            Some(contents)
-        }
-        Err(err) => {
-            println!("{}", err);
-            None
-        }
-    }
+    Some(String::from(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+        <wftp platform=\"windows\" version=\"1.0\">
+            <Servers>
+                <Server>
+                    <Host>127.0.0.1</Host>
+                    <Port>65521</Port>
+                    <User>zhangwenhao</User>
+                    <Pass>am01MjAxMzE0</Pass>
+                    <Name>6666</Name>
+                    <Protocol>1</Protocol>
+                    <LogonType>1</LogonType>
+                </Server>
+                <Server>
+                    <Host>127.0.0.1</Host>
+                    <Port>65521</Port>
+                    <User>zhangwenhao</User>
+                    <Pass>am01MjAxMzE0</Pass>
+                    <Name>6666</Name>
+                    <Protocol>1</Protocol>
+                    <LogonType>1</LogonType>
+                </Server>
+            </Servers>
+        </wftp>",
+    ))
 }
 
 #[tauri::command]
@@ -89,6 +98,7 @@ pub fn get_wftp_server(wftp_xml: String) -> Option<Vec<WftpServer>> {
 
 #[tauri::command]
 pub fn wftp_xml_string(xml_string: String) -> String {
+    println!("{}", xml_string);
     let servers: Vec<WftpServer> = serde_json::from_str(&xml_string).unwrap();
     let wftp_server = Wftp {
         servers: Servers { server: servers },

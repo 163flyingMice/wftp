@@ -6,6 +6,7 @@ use std::{collections::HashMap, sync::Mutex};
 
 use crate::result::CustomError;
 use crate::result::{Error, Success, CONNECTED_SUCCESS_CODE, DISCONNECTED_ERROR_CODE};
+use crate::util::get_snow_id;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FolderTree {
@@ -85,19 +86,20 @@ pub fn alive(name: String) -> String {
 }
 
 #[tauri::command]
-pub fn connect(addr: String, user: String, pass: String, name: String) -> String {
+pub fn connect(addr: String, user: String, pass: String) -> String {
     let mut ftp_stream;
     if let Ok(t) = FtpStream::connect(&addr) {
         ftp_stream = t;
         let _ = ftp_stream.login(&user, &pass);
+        let snow_id = get_snow_id();
         OWNER_FTP_STREAM
             .lock()
             .unwrap()
-            .insert(name, Some(ftp_stream));
+            .insert(snow_id.clone(), Some(ftp_stream));
         serde_json::to_string(&Success::new(
             CONNECTED_SUCCESS_CODE,
             String::from("连接成功！"),
-            (),
+            snow_id.clone(),
         ))
         .unwrap()
     } else {
@@ -168,50 +170,52 @@ pub fn cwd(name: String, path: String) -> String {
 pub fn list(name: String) -> Option<Vec<FileList>> {
     if let Some(temp) = OWNER_FTP_STREAM.lock().unwrap().get_mut(&name) {
         if let Some(ftp_stream) = temp {
-            let list = ftp_stream.list(None).expect("获取列表失败！");
-            let mut file_list = vec![FileList::new()];
-            for param in &list {
-                let temp = param
-                    .trim()
-                    .split(" ")
-                    .map(|s| s.to_string())
-                    .collect::<Vec<String>>();
-                let temp_len = temp.len();
-                let is_directory: String;
-                let first_at = temp.iter().nth(0).unwrap().chars().next().unwrap();
-                let mut name = HashMap::new();
-                let temp_name = temp.iter().nth(temp_len - 1).unwrap().to_string();
-                if first_at == 'd' {
-                    is_directory = "文件夹".to_string();
-                    name.insert(String::from("kind"), String::from("folder"));
-                } else {
-                    let extens: Vec<&str> = temp_name.split(".").collect();
-                    is_directory = extens[(extens.len() - 1)].to_string().to_uppercase() + " 文件";
-                    name.insert(String::from("kind"), String::from("file"));
+            if let Ok(list) = ftp_stream.list(None) {
+                let mut file_list = vec![FileList::new()];
+                for param in &list {
+                    let temp = param
+                        .trim()
+                        .split(" ")
+                        .map(|s| s.to_string())
+                        .collect::<Vec<String>>();
+                    let temp_len = temp.len();
+                    let is_directory: String;
+                    let first_at = temp.iter().nth(0).unwrap().chars().next().unwrap();
+                    let mut name = HashMap::new();
+                    let temp_name = temp.iter().nth(temp_len - 1).unwrap().to_string();
+                    if first_at == 'd' {
+                        is_directory = "文件夹".to_string();
+                        name.insert(String::from("kind"), String::from("folder"));
+                    } else {
+                        let extens: Vec<&str> = temp_name.split(".").collect();
+                        is_directory =
+                            extens[(extens.len() - 1)].to_string().to_uppercase() + " 文件";
+                        name.insert(String::from("kind"), String::from("file"));
+                    }
+                    name.insert(String::from("name"), temp_name);
+                    let size: usize;
+                    let temp_size = temp.iter().nth(temp_len - 6).unwrap();
+                    if temp_size != "0" && temp_size != "" {
+                        size = temp_size.parse::<usize>().unwrap();
+                    } else {
+                        size = 0;
+                    }
+                    file_list.push(FileList {
+                        permissions: temp.iter().nth(0).unwrap().to_string(),
+                        owner: temp.iter().nth(2).unwrap().to_string(),
+                        group: temp.iter().nth(3).unwrap().to_string(),
+                        size: size,
+                        is_directory: is_directory,
+                        update_at: temp.iter().nth(temp_len - 4).unwrap().to_string()
+                            + " "
+                            + temp.iter().nth(temp_len - 3).unwrap()
+                            + " "
+                            + temp.iter().nth(temp_len - 2).unwrap(),
+                        name: name,
+                    });
                 }
-                name.insert(String::from("name"), temp_name);
-                let size: usize;
-                let temp_size = temp.iter().nth(temp_len - 6).unwrap();
-                if temp_size != "0" && temp_size != "" {
-                    size = temp_size.parse::<usize>().unwrap();
-                } else {
-                    size = 0;
-                }
-                file_list.push(FileList {
-                    permissions: temp.iter().nth(0).unwrap().to_string(),
-                    owner: temp.iter().nth(2).unwrap().to_string(),
-                    group: temp.iter().nth(3).unwrap().to_string(),
-                    size: size,
-                    is_directory: is_directory,
-                    update_at: temp.iter().nth(temp_len - 4).unwrap().to_string()
-                        + " "
-                        + temp.iter().nth(temp_len - 3).unwrap()
-                        + " "
-                        + temp.iter().nth(temp_len - 2).unwrap(),
-                    name: name,
-                });
+                return Some(file_list);
             }
-            return Some(file_list);
         }
     }
     None
@@ -221,25 +225,28 @@ pub fn list(name: String) -> Option<Vec<FileList>> {
 pub fn folder_list(name: String) -> Option<FolderTree> {
     if let Some(temp) = OWNER_FTP_STREAM.lock().unwrap().get_mut(&name) {
         if let Some(ftp_stream) = temp {
-            let list = ftp_stream.list(None).expect("获取列表失败！");
-            let mut folder_tree = FolderTree::new();
-            let mut folder_leaf = Vec::new();
-            let mut num = 0;
-            for param in &list {
-                let temp = param
-                    .trim()
-                    .split(" ")
-                    .map(|s| s.to_string())
-                    .collect::<Vec<String>>();
-                let temp_len = temp.len();
-                folder_leaf.push(FolderLeaf {
-                    title: Some(temp.iter().nth(temp_len - 1).unwrap().to_string()),
-                    key: String::from(String::from("0-") + &(num.clone().to_string())),
-                });
-                num += 1;
+            if let Ok(list) = ftp_stream.list(None) {
+                let mut folder_tree = FolderTree::new();
+                let mut folder_leaf = Vec::new();
+                let mut num = 0;
+                for param in &list {
+                    let temp = param
+                        .trim()
+                        .split(" ")
+                        .map(|s| s.to_string())
+                        .collect::<Vec<String>>();
+                    let temp_len = temp.len();
+                    folder_leaf.push(FolderLeaf {
+                        title: Some(temp.iter().nth(temp_len - 1).unwrap().to_string()),
+                        key: String::from(String::from("0-") + &(num.clone().to_string())),
+                    });
+                    num += 1;
+                }
+                folder_tree.children = Some(folder_leaf);
+                Some(folder_tree)
+            } else {
+                None
             }
-            folder_tree.children = Some(folder_leaf);
-            Some(folder_tree)
         } else {
             None
         }
@@ -271,15 +278,20 @@ pub fn remove_file(name: String, filename: String) -> String {
         if let Some(ftp_stream) = temp {
             match ftp_stream.rm(&filename) {
                 Ok(_) => {
-                    return ("删除文件".to_string() + &filename + "成功！").to_string();
+                    return serde_json::to_string(&Success::new(
+                        200,
+                        String::from("删除文件成功！"),
+                        (),
+                    ))
+                    .unwrap();
                 }
                 Err(err) => {
-                    return err.to_string();
+                    return serde_json::to_string(&Error::new(502, err.to_string())).unwrap();
                 }
             }
         }
     }
-    String::from("删除文件失败！")
+    return serde_json::to_string(&Error::new(502, String::from("删除文件失败！"))).unwrap();
 }
 
 #[tauri::command]

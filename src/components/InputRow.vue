@@ -1,6 +1,13 @@
 <template>
-  <a-form :model="formState" name="horizontal_login" layout="inline" autocomplete="off" @finish="onFinish"
-    @finishFailed="onFinishFailed" :hideRequiredMark="true">
+  <a-form
+    :model="formState"
+    name="horizontal_login"
+    layout="inline"
+    autocomplete="off"
+    @finish="onFinish"
+    @finishFailed="onFinishFailed"
+    :hideRequiredMark="true"
+  >
     <a-form-item label="主机" name="host" style="width: 200px">
       <a-input v-model:value="formState.host"> </a-input>
     </a-form-item>
@@ -22,12 +29,8 @@
       <a-dropdown>
         <template #overlay>
           <a-menu>
-            <a-menu-item key="1">
-              清除快速连接栏
-            </a-menu-item>
-            <a-menu-item key="2">
-              清除历史记录
-            </a-menu-item>
+            <a-menu-item key="1"> 清除快速连接栏 </a-menu-item>
+            <a-menu-item key="2"> 清除历史记录 </a-menu-item>
           </a-menu>
         </template>
         <a-button>
@@ -53,8 +56,8 @@ export default defineComponent({
     });
 
     const onFinish = (values) => {
-      console.log(values)
-      let key = store.state.panes.length != 0 ? store.state.panes.length + 1 : 1
+      console.log(values);
+      let key = store.state.panes.length != 0 ? store.state.panes.length + 1 : 1;
       store.state.panes.push({
         title: "临时连接",
         key: key,
@@ -63,10 +66,11 @@ export default defineComponent({
           User: values.user,
           Pass: values.pass,
           Port: values.port,
+          Protocol: 1,
           Name: "临时连接",
         },
-      })
-      store.state.listActiveKey = key
+      });
+      store.state.listActiveKey = key;
     };
 
     const onFinishFailed = (errorInfo) => {
