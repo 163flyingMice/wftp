@@ -1,5 +1,7 @@
 import store from "@/store";
-import { invoke } from "@tauri-apps/api";
+import {
+    invoke
+} from "@tauri-apps/api";
 
 let connected;
 
@@ -69,43 +71,65 @@ export async function prev() {
 
 export async function create(filename) {
     connected = getProtocol();
-    return await invoke(funcMap["create"][connected.data.Protocol], { name: connected.connectedId, filename: filename })
+    return await invoke(funcMap["create"][connected.data.Protocol], {
+        name: connected.connectedId,
+        filename: filename
+    })
 }
 
 export async function unlink(filename) {
     connected = getProtocol();
-    return await invoke(funcMap["unlink"][connected.data.Protocol], { name: connected.connectedId, filename: filename })
+    return await invoke(funcMap["unlink"][connected.data.Protocol], {
+        name: connected.connectedId,
+        filename: filename
+    })
 }
 
 export async function rmdir(path) {
     connected = getProtocol();
-    return await invoke(funcMap["rmdir"][connected.data.Protocol], { name: connected.connectedId, path: path })
+    return await invoke(funcMap["rmdir"][connected.data.Protocol], {
+        name: connected.connectedId,
+        path: path
+    })
 }
 
 export async function mk_dir(path) {
     connected = getProtocol();
-    return await invoke(funcMap["mk_dir"][connected.data.Protocol], { name: connected.connectedId, path: path })
+    return await invoke(funcMap["mk_dir"][connected.data.Protocol], {
+        name: connected.connectedId,
+        path: path
+    })
 }
 
 export async function pwd() {
     connected = getProtocol();
-    return await invoke(funcMap["pwd"][connected.data.Protocol], { name: connected.connectedId })
+    return await invoke(funcMap["pwd"][connected.data.Protocol], {
+        name: connected.connectedId
+    })
 }
 
 export async function rename_file(fromName, toName) {
     connected = getProtocol();
-    return await invoke(funcMap["rename_file"][connected.data.Protocol], { name: connected.connectedId, fromName: fromName, toName: toName })
+    return await invoke(funcMap["rename_file"][connected.data.Protocol], {
+        name: connected.connectedId,
+        fromName: fromName,
+        toName: toName
+    })
 }
 
 export async function size_sort(fileList, sortWay) {
     connected = getProtocol();
-    return await invoke(funcMap["size_sort"][connected.data.Protocol], { name: connected.connectedId, fileList: fileList, sortWay: sortWay })
+    return await invoke(funcMap["size_sort"][connected.data.Protocol], {
+        name: connected.connectedId,
+        fileList: fileList,
+        sortWay: sortWay
+    })
 }
 
 
 
 
-function getProtocol() {
+export function getProtocol() {
     store.state.panes.forEach((elem) => {
         if (elem.key == store.state.listActiveKey) {
             connected = elem;

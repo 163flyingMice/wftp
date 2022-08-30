@@ -9,18 +9,12 @@
     <a-col style="min-width: 100px !important; width: 100%">
       <div>
         <a-input :value="remotePath" addon-before="远程站点：" />
-        <a-tree
-          style="
+        <a-tree style="
             overflow-y: auto;
             max-height: 100px !important;
             min-height: 100px !important;
-          "
-          :default-expanded-keys="['0']"
-          :show-line="true"
-          :tree-data="treeData"
-          @select="onSelect"
-          :showIcon="false"
-        >
+          " :default-expanded-keys="['0']" :show-line="true" :tree-data="treeData" @select="onSelect"
+          :showIcon="false">
           <template #title="{ dataRef }">
             {{ dataRef.title }}
           </template>
@@ -28,39 +22,19 @@
       </div>
     </a-col>
   </a-row>
-  <a-row
-    style="min-height: 300px !important; max-height: 300px !important; overflow: auto"
-    class="remoteTable"
-  >
+  <a-row style="min-height: 300px !important; max-height: 300px !important; overflow: auto" class="remoteTable">
     <a-col style="">
-      <a-table
-        :customHeaderRow="customHeaderRow"
-        v-mouse-menu="options"
-        :columns="columns"
-        :data-source="dataSource"
-        :pagination="false"
-        :customRow="customRow"
-        :scroll="{ x: 800 }"
-      >
+      <a-table :customHeaderRow="customHeaderRow" v-mouse-menu="options" :columns="columns" :data-source="dataSource"
+        :pagination="false" :customRow="customRow" :scroll="{ x: 800 }">
         <template #bodyCell="{ column, text }">
           <template v-if="column.dataIndex === 'name'">
-            <folder-open-outlined
-              :style="{ color: '#ffe896' }"
-              v-if="text.kind === 'folder'"
-            />
+            <folder-open-outlined :style="{ color: '#ffe896' }" v-if="text.kind === 'folder'" />
             <file-outlined v-else />
-            <a-input
-              class="showInput"
-              v-if="text.showInput"
-              v-model:value="toName"
-              :bordered="false"
-              placeholder=""
-              @pressEnter.prevent="renameInput"
-              @focus.prevent="handleFocus"
-              style="display: inline-block; width: 80px"
-            />
+            <a-input class="showInput" v-if="text.showInput" v-model:value="toName" :bordered="false" placeholder=""
+              @pressEnter.prevent="renameInput" @focus.prevent="handleFocus"
+              style="display: inline-block; width: 80px" />
             <text v-else :title="text.name">{{
-              text.name.length > 20 ? text.name.slice(0, 20) + "..." : text.name
+                text.name.length > 20 ? text.name.slice(0, 20) + "..." : text.name
             }}</text>
           </template>
         </template>
@@ -91,6 +65,7 @@ import {
   rename_file,
   pwd,
   size_sort,
+  getProtocol,
 } from "../apis/index";
 export default {
   props: {
@@ -259,7 +234,7 @@ export default {
           {
             label: "文件权限",
             tips: "Permissions",
-            fn: () => {},
+            fn: () => { },
           },
         ],
       },
@@ -325,7 +300,7 @@ export default {
     }
     this.$watch(
       () => {
-        return store.state.connected;
+        return getProtocol();
       },
       function (newVal) {
         if (newVal) {
@@ -337,7 +312,9 @@ export default {
   watch: {},
   methods: {
     getData() {
-      if (store.state.connected) {
+      console.log(1)
+      this.dataSource = [];
+      if (getProtocol().connectedId) {
         pwd().then((response) => {
           this.remotePath = response;
         });
@@ -466,14 +443,14 @@ export default {
   font-size: 10px !important;
 }
 
-.ant-table-thead > tr > th,
-.ant-table-tbody > tr > td,
-.ant-table tfoot > tr > th,
-.ant-table tfoot > tr > td {
+.ant-table-thead>tr>th,
+.ant-table-tbody>tr>td,
+.ant-table tfoot>tr>th,
+.ant-table tfoot>tr>td {
   padding: 2px 5px !important;
 }
 
-.ant-table-container table > thead > tr:first-child th {
+.ant-table-container table>thead>tr:first-child th {
   font-weight: bolder;
 }
 

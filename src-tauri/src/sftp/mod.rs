@@ -6,7 +6,7 @@ use std::sync::Mutex;
 
 use crate::remote::{FileList, FolderLeaf, FolderTree};
 use crate::result::{CustomError, Error, Success, CONNECTED_SUCCESS_CODE, DISCONNECTED_ERROR_CODE};
-use crate::util::{get_format_time, get_snow_id};
+use crate::util::{get_format_perm, get_format_time, get_snow_id};
 
 pub struct SftpStruct {
     sftp: Option<Sftp>,
@@ -77,7 +77,9 @@ pub fn readdir(name: String) -> Option<Vec<FileList>> {
             }
             let mut size = file_stat.size.unwrap() as usize;
             let is_directory: String;
+            let mut perm: String = String::from("");
             if file_stat.is_dir() {
+                perm += "d";
                 size = 0;
                 is_directory = String::from("文件夹");
                 name.insert(String::from("kind"), String::from("folder"));
@@ -107,13 +109,8 @@ pub fn readdir(name: String) -> Option<Vec<FileList>> {
                 String::from("path"),
                 elem.0.clone().to_str().unwrap().to_string(),
             );
-            let temp_perm = format!("{:o}", file_stat.perm.unwrap());
-            let perm_g = &temp_perm[(temp_perm.len() - 1)..];
-            let perm_o = &temp_perm[(temp_perm.len() - 2)..(temp_perm.len() - 1)];
-            let perm_other = &temp_perm[(temp_perm.len() - 3)..(temp_perm.len() - 2)];
-            println!("{},{},{}", perm_g, perm_o, perm_other);
             file_list.push(FileList {
-                permissions: file_stat.perm.unwrap().to_string(),
+                permissions: perm + &get_format_perm(file_stat.perm.unwrap()),
                 owner: file_stat.uid.unwrap().to_string(),
                 group: file_stat.gid.unwrap().to_string(),
                 size: size,
