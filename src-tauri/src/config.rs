@@ -1,6 +1,8 @@
 use quick_xml::{de::from_str, se::Serializer};
 use serde::{Deserialize, Serialize};
 
+use crate::result::{Error, Success};
+
 #[derive(Debug, Deserialize, PartialEq, Default, Serialize)]
 #[serde(rename = "wftp", default)]
 pub struct Wftp {
@@ -58,9 +60,12 @@ pub struct WftpServer {
 const XML_HEADER: &str = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
 
 #[tauri::command]
-pub fn get_default_wftp() -> Option<String> {
-    Some(String::from(
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+pub fn get_default_wftp() -> String {
+    serde_json::to_string(&Success::new(
+        200,
+        String::from("获取成功！"),
+        String::from(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
         <wftp platform=\"windows\" version=\"1.0\">
             <Servers>
                 <Server>
@@ -83,31 +88,53 @@ pub fn get_default_wftp() -> Option<String> {
                 </Server>
             </Servers>
         </wftp>",
+        ),
     ))
+    .unwrap()
 }
 
 #[tauri::command]
-pub fn get_wftp_server(wftp_xml: String) -> Option<Vec<WftpServer>> {
-    let wftp: Wftp = from_str(&wftp_xml).unwrap();
-    let mut server = Vec::new();
-    for elem in wftp.servers.server.into_iter() {
-        server.push(elem);
+pub fn get_wftp_server(wftp_xml: String) -> String {
+    match from_str(&wftp_xml) {
+        Ok(wftp) => {
+            let wftp: Wftp = wftp;
+            let mut server = Vec::new();
+            for elem in wftp.servers.server.into_iter() {
+                server.push(elem);
+            }
+            serde_json::to_string(&Success::new(200, String::from("获取成功！"), server)).unwrap()
+        }
+        Err(err) => serde_json::to_string(&Error::new(400, err.to_string())).unwrap(),
     }
-    Some(server)
 }
 
 #[tauri::command]
 pub fn wftp_xml_string(xml_string: String) -> String {
-    println!("{}", xml_string);
-    let servers: Vec<WftpServer> = serde_json::from_str(&xml_string).unwrap();
-    let wftp_server = Wftp {
-        servers: Servers { server: servers },
-        platform: String::from("windows"),
-        version: String::from("1.0"),
-    };
-    let mut buffer = Vec::new();
-    let mut ser = Serializer::new(&mut buffer);
-    let _ = wftp_server.serialize(&mut ser).unwrap();
-    let wftp_xml = XML_HEADER.to_string() + &(String::from_utf8(buffer).unwrap());
-    wftp_xml
+    match serde_json::from_str(&xml_string) {
+        Ok(servers) => {
+            let wftp_server = Wftp {
+                servers: Servers { server: servers },
+                platform: String::from("windows"),
+                version: String::from("1.0"),
+            };
+            let mut buffer = Vec::new();
+            let mut ser = Serializer::new(&mut buffer);
+            match wftp_server.serialize(&mut ser) {
+                Ok(_) => match String::from_utf8(buffer) {
+                    Ok(t) => {
+                        let wftp_xml = XML_HEADER.to_string() + &t;
+                        serde_json::to_string(&Success::new(
+                            200,
+                            String::from("获取成功！"),
+                            wftp_xml,
+                        ))
+                        .unwrap()
+                    }
+                    Err(err) => serde_json::to_string(&Error::new(400, err.to_string())).unwrap(),
+                },
+                Err(err) => serde_json::to_string(&Error::new(400, err.to_string())).unwrap(),
+            }
+        }
+        Err(err) => serde_json::to_string(&Error::new(400, err.to_string())).unwrap(),
+    }
 }

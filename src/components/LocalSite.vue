@@ -91,6 +91,7 @@ import { createVNode, ref } from "vue";
 import { Modal } from "ant-design-vue";
 import { invoke } from "@tauri-apps/api/tauri";
 import store from "@/store";
+import { upload } from "../apis/index";
 export default {
   props: {
     refreshRemote: Function,
@@ -131,20 +132,20 @@ export default {
             label: "上传",
             tips: "Upload",
             fn: () => {
+              let name = JSON.parse(JSON.stringify(this.selected.name));
               switch (this.selected.kind) {
                 case "folder":
                   break;
                 default:
                   readBinaryFile(this.selected.path)
                     .then((response) => {
-                      invoke("upload", {
-                        name: store.state.connectedName,
-                        filename: this.selected.name,
-                        content: this.arrayBufferToBase64(response),
-                      })
+                      upload(name, this.arrayBufferToBase64(response))
                         .then((response) => {
-                          this.refreshRemote();
-                          console.log(response);
+                          let res = JSON.parse(response);
+                          if (res.code == 200) {
+                            this.refreshRemote();
+                          }
+                          store.state.stateList.push("响应：" + res.msg);
                         })
                         .catch((err) => {
                           console.log(err);

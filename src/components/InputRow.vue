@@ -1,8 +1,26 @@
 <template>
-  <a-form :model="formState" name="horizontal_login" layout="inline" autocomplete="off" @finish="onFinish"
-    @finishFailed="onFinishFailed" :hideRequiredMark="true">
-    <a-form-item label="主机" name="host" style="width: 200px">
-      <a-input v-model:value="formState.host"> </a-input>
+  <a-form
+    :model="formState"
+    name="horizontal_login"
+    layout="inline"
+    autocomplete="off"
+    @finish="onFinish"
+    @finishFailed="onFinishFailed"
+    :hideRequiredMark="true"
+  >
+    <a-form-item label="主机" name="host" style="width: 300px">
+      <a-input v-model:value="formState.host">
+        <template #addonBefore>
+          <a-select
+            v-model:value="formState.protocol"
+            name="protocol"
+            style="width: 80px"
+          >
+            <a-select-option value="sftp">sftp://</a-select-option>
+            <a-select-option value="ftp">ftp://</a-select-option>
+          </a-select>
+        </template>
+      </a-input>
     </a-form-item>
 
     <a-form-item label="用户名" name="user" style="width: 200px">
@@ -37,7 +55,6 @@
 import { defineComponent, reactive, computed } from "vue";
 import { DownOutlined } from "@ant-design/icons-vue";
 import store from "@/store/index";
-import { Modal } from "ant-design-vue";
 export default defineComponent({
   components: { DownOutlined },
 
@@ -47,23 +64,18 @@ export default defineComponent({
       port: "",
       user: "",
       pass: "",
-      protocol: "",
+      protocol: "sftp",
     });
 
     const onFinish = (values) => {
-      let protocols = ["sftp", "ftp"];
-      if (values.host.search("://") != -1) {
-        let temp = values.host.split("://")
-        values.host = temp[1]
-        values.protocol = protocols.indexOf(temp[0]) == -1 ? 1 : protocols.indexOf(temp[0]);
-      } else {
-        Modal.error({
-          title: "填写错误提示",
-          content: "主机的格式应为：ftp://主机\nsftp://主机",
-        });
-        return
-      }
       let key = store.state.panes.length != 0 ? store.state.panes.length + 1 : 1;
+      let protocols = ["sftp", "ftp"];
+      let protocol = 0;
+      protocols.forEach((elem, index) => {
+        if (elem == formState.protocol) {
+          protocol = index;
+        }
+      });
       store.state.panes.push({
         title: "临时连接",
         key: key,
@@ -72,7 +84,7 @@ export default defineComponent({
           User: values.user,
           Pass: values.pass,
           Port: values.port,
-          Protocol: values.protocol,
+          Protocol: protocol,
           Name: "临时连接",
         },
       });
@@ -84,7 +96,13 @@ export default defineComponent({
     };
 
     const disabled = computed(() => {
-      return !(formState.user && formState.pass && formState.host && formState.port);
+      return !(
+        formState.user &&
+        formState.pass &&
+        formState.host &&
+        formState.port &&
+        formState.protocol
+      );
     });
     return {
       formState,

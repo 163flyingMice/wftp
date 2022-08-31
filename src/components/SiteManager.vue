@@ -1,17 +1,33 @@
 <template>
-  <a-modal :visible="modalVisible" title="站点管理器" centered width="800px" @cancel="modalVisible = false"
-    :maskClosable="false">
+  <a-modal
+    :visible="modalVisible"
+    title="站点管理器"
+    centered
+    width="800px"
+    @cancel="modalVisible = false"
+    :maskClosable="false"
+  >
     <a-layout>
       <a-layout-sider theme="light" width="350px" style="margin-right: 6px">
         <a-row style="height: 300px">
-          <a-tree :tree-data="treeData" :show-icon="true" @select="selectLeaf" :defaultExpandAll="true">
+          <a-tree
+            :tree-data="treeData"
+            :show-icon="true"
+            @select="selectLeaf"
+            :defaultExpandAll="true"
+          >
             <template #title="dataRef">
               <template v-if="!dataRef.editable && !dataRef.writable">
                 {{ dataRef.Name }}
               </template>
               <template v-else>
                 <div>
-                  <a-input @focus="handleFocus" v-model:value="title" size="small" @pressEnter="handleEnter(dataRef)" />
+                  <a-input
+                    @focus="handleFocus"
+                    v-model:value="title"
+                    size="small"
+                    @pressEnter="handleEnter(dataRef)"
+                  />
                 </div>
               </template>
             </template>
@@ -29,13 +45,17 @@
         <a-row style="margin-top: 5px" class="button">
           <a-col :span="24" align="middle">
             <a-button type="default">新键书签</a-button>
-            <a-button type="default" @click="rename" :disabled="!hasSelected">重命名</a-button>
+            <a-button type="default" @click="rename" :disabled="!hasSelected"
+              >重命名</a-button
+            >
           </a-col>
         </a-row>
         <a-row style="margin-top: 5px" class="button">
           <a-col :span="24" align="middle">
             <a-button type="default" @click="del" :disabled="!hasSelected">删除</a-button>
-            <a-button type="default" @click="copy" :disabled="!hasSelected">复制</a-button>
+            <a-button type="default" @click="copy" :disabled="!hasSelected"
+              >复制</a-button
+            >
           </a-col>
         </a-row>
       </a-layout-sider>
@@ -46,7 +66,11 @@
               <a-form>
                 <a-form-item label="协议" name="protocol">
                   <a-select v-model:value="protocol" :disabled="!hasSelected">
-                    <a-select-option :value="elem" v-for="(elem, index) in protocols" :key="index">
+                    <a-select-option
+                      :value="elem"
+                      v-for="(elem, index) in protocols"
+                      :key="index"
+                    >
                       {{ elem }}
                     </a-select-option>
                   </a-select>
@@ -65,7 +89,11 @@
               <a-form>
                 <a-form-item label="登录类型" name="type">
                   <a-select v-model:value="loginType" :disabled="!hasSelected">
-                    <a-select-option :value="elem" v-for="(elem, index) in loginTypes" :key="index">
+                    <a-select-option
+                      :value="elem"
+                      v-for="(elem, index) in loginTypes"
+                      :key="index"
+                    >
                       {{ elem }}
                     </a-select-option>
                   </a-select>
@@ -86,7 +114,11 @@
                   </a-select>
                 </a-form-item>
                 <a-form-item label="注释" name="remark" style="width: 350px">
-                  <a-textarea :disabled="!hasSelected" placeholder="" :auto-size="{ minRows: 5, maxRows: 10 }" />
+                  <a-textarea
+                    :disabled="!hasSelected"
+                    placeholder=""
+                    :auto-size="{ minRows: 5, maxRows: 10 }"
+                  />
                 </a-form-item>
               </a-form>
             </a-row>
@@ -96,7 +128,11 @@
               <a-form>
                 <a-form-item label="服务器类型" name="serverType" style="width: 300px">
                   <a-select v-model:value="serverType">
-                    <a-select-option :value="elem" v-for="(elem, index) in serverTypes" :key="index">
+                    <a-select-option
+                      :value="elem"
+                      v-for="(elem, index) in serverTypes"
+                      :key="index"
+                    >
                       {{ elem }}
                     </a-select-option>
                   </a-select>
@@ -247,8 +283,11 @@ export default {
       invoke("wftp_xml_string", {
         xmlString: JSON.stringify(this.treeData[0].children),
       }).then((response) => {
-        localStorage.setItem("wftp_server", response);
-        this.refreshWftpServer();
+        let res = JSON.parse(response);
+        if (res.code == 200) {
+          localStorage.setItem("wftp_server", res.list);
+          this.refreshWftpServer();
+        }
       });
     },
     getWftpServer() {
@@ -269,7 +308,7 @@ export default {
       this.treeData[0].children.forEach((elem) => {
         elem.writable = false;
         elem.editable = false;
-      })
+      });
       this.treeData[0].children.push({
         key: "0-" + this.treeData[0].children.length,
         Name: "新站点",
@@ -292,7 +331,7 @@ export default {
       this.treeData[0].children.forEach((elem) => {
         elem.writable = false;
         elem.editable = false;
-      })
+      });
       this.title = this.selected.Name;
       this.treeData[0].children.push({
         key: "0-" + this.treeData[0].children.length,

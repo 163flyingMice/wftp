@@ -18,11 +18,14 @@ let funcMap = {
     "pwd": ["sftp_pwd", "pwd"],
     "rename_file": ["sftp_rename", "rename_file"],
     "size_sort": ["size_sort", "size_sort"],
+    "upload": ["upload", "upload"],
 };
 
 
 export async function connect() {
     connected = getProtocol();
+    store.state.stateList.push("状态：正在连接" + connected.data.Name);
+    connected.connected = false;
     invoke(funcMap["connect"][connected.data.Protocol], {
         addr: connected.data.Host + ":" + connected.data.Port,
         user: connected.data.User,
@@ -31,9 +34,12 @@ export async function connect() {
         let res = JSON.parse(response);
         if (res.code == 200) {
             store.state.connected = true;
+            connected.connected = true;
+            connected.connectedId = res.list;
+            store.state.stateList.push("响应：" + res.msg);
+        } else {
+            store.state.stateList.push("响应：" + res.msg);
         }
-        connected.connectedId = res.list;
-        store.state.stateList.push("响应：" + res.msg);
     }).catch((err) => {
         store.state.stateList.push("响应：" + err);
     });
@@ -126,6 +132,14 @@ export async function size_sort(fileList, sortWay) {
     })
 }
 
+export async function upload(filename, content) {
+    connected = getProtocol();
+    return await invoke(funcMap["upload"][connected.data.Protocol], {
+        name: connected.connectedId,
+        filename: filename,
+        content: content,
+    })
+}
 
 
 

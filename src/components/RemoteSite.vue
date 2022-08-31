@@ -9,12 +9,18 @@
     <a-col style="min-width: 100px !important; width: 100%">
       <div>
         <a-input :value="remotePath" addon-before="远程站点：" />
-        <a-tree style="
+        <a-tree
+          style="
             overflow-y: auto;
             max-height: 100px !important;
             min-height: 100px !important;
-          " :default-expanded-keys="['0']" :show-line="true" :tree-data="treeData" @select="onSelect"
-          :showIcon="false">
+          "
+          :default-expanded-keys="['0']"
+          :show-line="true"
+          :tree-data="treeData"
+          @select="onSelect"
+          :showIcon="false"
+        >
           <template #title="{ dataRef }">
             {{ dataRef.title }}
           </template>
@@ -22,19 +28,39 @@
       </div>
     </a-col>
   </a-row>
-  <a-row style="min-height: 300px !important; max-height: 300px !important; overflow: auto" class="remoteTable">
+  <a-row
+    style="min-height: 300px !important; max-height: 300px !important; overflow: auto"
+    class="remoteTable"
+  >
     <a-col style="">
-      <a-table :customHeaderRow="customHeaderRow" v-mouse-menu="options" :columns="columns" :data-source="dataSource"
-        :pagination="false" :customRow="customRow" :scroll="{ x: 800 }">
+      <a-table
+        :customHeaderRow="customHeaderRow"
+        v-mouse-menu="options"
+        :columns="columns"
+        :data-source="dataSource"
+        :pagination="false"
+        :customRow="customRow"
+        :scroll="{ x: 800 }"
+      >
         <template #bodyCell="{ column, text }">
           <template v-if="column.dataIndex === 'name'">
-            <folder-open-outlined :style="{ color: '#ffe896' }" v-if="text.kind === 'folder'" />
+            <folder-open-outlined
+              :style="{ color: '#ffe896' }"
+              v-if="text.kind === 'folder'"
+            />
             <file-outlined v-else />
-            <a-input class="showInput" v-if="text.showInput" v-model:value="toName" :bordered="false" placeholder=""
-              @pressEnter.prevent="renameInput" @focus.prevent="handleFocus"
-              style="display: inline-block; width: 80px" />
+            <a-input
+              class="showInput"
+              v-if="text.showInput"
+              v-model:value="toName"
+              :bordered="false"
+              placeholder=""
+              @pressEnter.prevent="renameInput"
+              @focus.prevent="handleFocus"
+              style="display: inline-block; width: 80px"
+            />
             <text v-else :title="text.name">{{
-                text.name.length > 20 ? text.name.slice(0, 20) + "..." : text.name
+              text.name.length > 20 ? text.name.slice(0, 20) + "..." : text.name
             }}</text>
           </template>
         </template>
@@ -105,18 +131,28 @@ export default {
             label: "下载",
             tips: "Download",
             fn: (...args) => console.log("download", args),
+            disabled: () => {
+              return true;
+            },
           },
           {
             label: "添加文件到队列",
             tips: "Add",
             fn: (...args) => console.log("add", args),
+            disabled: () => {
+              return true;
+            },
           },
           {
             label: "进入目录",
             tips: "Enter",
             fn: () => {
               cwd(this.currentPath).then((response) => {
-                store.state.stateList.push("状态：" + response);
+                let res = JSON.parse(response);
+                if (res.code == 200) {
+                  this.getData();
+                }
+                store.state.stateList.push("响应：" + res.msg);
               });
               this.getData();
             },
@@ -217,24 +253,32 @@ export default {
             fn: () => {
               store.state.stateList.push("命令：复制URL");
               pwd().then((response) => {
-                let text = response + this.selected.name;
-                if (response !== "/") {
-                  text = response + "/" + this.selected.name;
+                let res = JSON.parse(response);
+                if (res.code == 200) {
+                  let text = res.list + this.selected.name;
+                  if (res.list !== "/") {
+                    text = res.list + "/" + this.selected.name;
+                  }
+                  this.$copyText(text)
+                    .then(() => {
+                      store.state.stateList.push("响应：已经复制到了剪贴板");
+                    })
+                    .catch((err) => {
+                      store.state.stateList.push("响应：" + err);
+                    });
+                } else {
+                  store.state.stateList.push("状态：" + res.msg);
                 }
-                this.$copyText(text)
-                  .then(() => {
-                    store.state.stateList.push("响应：已经复制到了剪贴板");
-                  })
-                  .catch((err) => {
-                    store.state.stateList.push("响应：" + err);
-                  });
               });
             },
           },
           {
             label: "文件权限",
             tips: "Permissions",
-            fn: () => { },
+            fn: () => {},
+            disabled: () => {
+              return true;
+            },
           },
         ],
       },
@@ -295,12 +339,11 @@ export default {
   mounted() {
     store.state.connected = false;
     if (this.data) {
-      store.state.stateList.push("状态：正在连接" + this.data.Name);
       connect();
     }
     this.$watch(
       () => {
-        return getProtocol();
+        return store.state.connected;
       },
       function (newVal) {
         if (newVal) {
@@ -312,11 +355,19 @@ export default {
   watch: {},
   methods: {
     getData() {
-      console.log(1)
+      this.selected = {};
       this.dataSource = [];
-      if (getProtocol().connectedId) {
+      if (
+        getProtocol().connectedId &&
+        this.data.connectedId == getProtocol().connectedId
+      ) {
         pwd().then((response) => {
-          this.remotePath = response;
+          let res = JSON.parse(response);
+          if (res.code == 200) {
+            this.remotePath = res.list;
+          } else {
+            store.state.stateList.push("状态：" + res.msg);
+          }
         });
         store.state.stateList.push("命令：列出“" + this.remotePath + "”的目录");
         this.getTreeData();
@@ -324,8 +375,13 @@ export default {
           .querySelectorAll("tr")
           .forEach((elem) => elem.classList.remove("selected"));
         readdir(this.currentPath).then((response) => {
-          this.dataSource = response;
-          store.state.stateList.push("响应：列出“" + this.remotePath + "”的目录成功");
+          let res = JSON.parse(response);
+          if (res.code == 200) {
+            this.dataSource = res.list;
+            store.state.stateList.push("响应：列出“" + this.remotePath + "”的目录成功");
+          } else {
+            store.state.stateList.push("状态：" + res.msg);
+          }
         });
       }
     },
@@ -339,7 +395,11 @@ export default {
           ) {
             let first = this.dataSource.shift();
             size_sort(this.dataSource, this.sortWay).then((response) => {
-              this.dataSource = [].concat(first, response);
+              let res = JSON.parse(response);
+              if (res.code == 200) {
+                this.dataSource = [].concat(first, res.list);
+              }
+              store.state.stateList.push("响应：" + res.msg);
             });
           }
         },
@@ -354,15 +414,22 @@ export default {
           if (record.name.name != "..") {
             this.currentPath = record.name.name;
             cwd(this.currentPath).then((response) => {
-              store.state.stateList.push("状态：" + response);
+              let res = JSON.parse(response);
+              if (res.code == 200) {
+                this.getData();
+              }
+              store.state.stateList.push("响应：" + res.msg);
             });
           } else {
             this.currentPath = this.prevPath;
             prev().then((response) => {
-              store.state.stateList.push("状态：" + response);
+              let res = JSON.parse(response);
+              if (res.code == 200) {
+                this.getData();
+              }
+              store.state.stateList.push("响应：" + res.msg);
             });
           }
-          this.getData();
         },
         onContextmenu: (event) => {
           this.currentPath = record.name.name;
@@ -399,7 +466,12 @@ export default {
     },
     getTreeData() {
       getTree().then((response) => {
-        this.treeData = [response];
+        let res = JSON.parse(response);
+        if (res.code == 200) {
+          this.treeData = [res.list];
+        } else {
+          store.state.stateList.push("状态：" + res.msg);
+        }
       });
     },
     handleOk() {
@@ -443,14 +515,14 @@ export default {
   font-size: 10px !important;
 }
 
-.ant-table-thead>tr>th,
-.ant-table-tbody>tr>td,
-.ant-table tfoot>tr>th,
-.ant-table tfoot>tr>td {
+.ant-table-thead > tr > th,
+.ant-table-tbody > tr > td,
+.ant-table tfoot > tr > th,
+.ant-table tfoot > tr > td {
   padding: 2px 5px !important;
 }
 
-.ant-table-container table>thead>tr:first-child th {
+.ant-table-container table > thead > tr:first-child th {
   font-weight: bolder;
 }
 

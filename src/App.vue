@@ -1,6 +1,9 @@
 <template>
   <a-row>
-    <action-button :changeModelVisible="changeModelVisible" :refreshRemote="refreshRemote" />
+    <action-button
+      :changeModelVisible="changeModelVisible"
+      :refreshRemote="refreshRemote"
+    />
   </a-row>
   <a-row>
     <input-row />
@@ -10,15 +13,31 @@
       <state-list />
     </a-col>
   </a-row>
-  <a-tabs v-if="noConnect" @change="changeTab" v-model:activeKey="listActiveKey" type="editable-card" :hideAdd="true"
-    @edit="editTab">
-    <a-tab-pane v-for="pane in panes" :key="pane.key" :tab="pane.title" :closable="pane.closable" ref="tabPane">
+  <a-tabs
+    v-if="noConnect"
+    @change="changeTab"
+    v-model:activeKey="listActiveKey"
+    type="editable-card"
+    :hideAdd="true"
+    @edit="editTab"
+  >
+    <a-tab-pane
+      v-for="pane in panes"
+      :key="pane.key"
+      :tab="pane.title"
+      :closable="pane.closable"
+      ref="tabPane"
+    >
       <a-row>
         <a-col :span="12">
           <local-site :state="localSiteState" :refreshRemote="refreshRemote" />
         </a-col>
         <a-col :span="12">
-          <remote-site :state="remoteSiteState" :ref="'remoteSite' + pane.key" :data="pane.data" />
+          <remote-site
+            :state="remoteSiteState"
+            :ref="'remoteSite' + pane.key"
+            :data="pane"
+          />
         </a-col>
       </a-row>
     </a-tab-pane>
@@ -37,7 +56,11 @@
       <transfe-list />
     </a-col>
   </a-row>
-  <site-manager ref="siteManager" v-if="modalVisible" :refreshWftpServer="getWftpServer" />
+  <site-manager
+    ref="siteManager"
+    v-if="modalVisible"
+    :refreshWftpServer="getWftpServer"
+  />
   <label-manager />
   <add-label />
   <folder-browser />
@@ -56,10 +79,7 @@ import SiteManager from "./components/SiteManager.vue";
 import LabelManager from "./components/LabelManager.vue";
 import AddLabel from "./components/AddLabel.vue";
 import { invoke } from "@tauri-apps/api";
-import {
-  getProtocol,
-  connect,
-} from "./apis/index";
+import { connect, getProtocol } from "./apis/index";
 
 export default {
   name: "App",
@@ -89,8 +109,12 @@ export default {
         localStorage.getItem("wftp_server") == "null"
       ) {
         invoke("get_default_wftp", {}).then((response) => {
-          localStorage.setItem("wftp_server", response);
-          this.getWftpServer();
+          console.log(response);
+          let res = JSON.parse(response);
+          if (res.code == 200) {
+            localStorage.setItem("wftp_server", res.list);
+            this.getWftpServer();
+          }
         });
       }
     },
@@ -101,7 +125,10 @@ export default {
       ) {
         invoke("get_wftp_server", { wftpXml: localStorage.getItem("wftp_server") }).then(
           (response) => {
-            store.state.wftpServer = response;
+            let res = JSON.parse(response);
+            if (res.code == 200) {
+              store.state.wftpServer = res.list;
+            }
           }
         );
       }
@@ -120,30 +147,27 @@ export default {
       this.loginType = this.loginTypes[elem.node.LogonType];
     },
     refreshRemote() {
-      if (getProtocol().connectedId) {
+      if (
+        this.$refs["remoteSite" + this.listActiveKey] != undefined &&
+        getProtocol().connectedId
+      ) {
         this.$refs["remoteSite" + this.listActiveKey][0].getData();
-      } else {
+      }
+      if (getProtocol().connected != undefined && !getProtocol().connected) {
         connect();
       }
     },
     removeTab(targetKey) {
-      let lastIndex = 0;
-      this.panes.forEach((pane, i) => {
-        if (pane.key === targetKey) {
-          lastIndex = i - 1;
-        }
-      });
       this.panes = this.panes.filter((pane) => pane.key !== targetKey);
-
-      if (this.panes.length && this.listActiveKey === targetKey) {
-        if (lastIndex >= 0) {
-          this.listActiveKey = this.panes[lastIndex].key;
-        } else {
-          this.listActiveKey = this.panes[0].key;
-        }
+      if (
+        this.panes.length > 0 &&
+        this.listActiveKey != this.panes[this.panes.length - 1].key
+      ) {
+        this.listActiveKey = this.panes[this.panes.length - 1].key;
+        this.refreshRemote();
       }
     },
-    addTab() { },
+    addTab() {},
     editTab(targetKey, action) {
       if (action === "add") {
         this.addTab();
@@ -204,7 +228,7 @@ export default {
   data() {
     return {};
   },
-  setup() { },
+  setup() {},
 };
 </script>
 
@@ -271,14 +295,14 @@ export default {
   background: #107bcb;
 }
 
-#components-layout-demo-basic>.code-box-demo>.ant-layout+.ant-layout {
+#components-layout-demo-basic > .code-box-demo > .ant-layout + .ant-layout {
   margin-top: 48px;
 }
 
-.ant-tabs-top>.ant-tabs-nav,
-.ant-tabs-bottom>.ant-tabs-nav,
-.ant-tabs-top>div>.ant-tabs-nav,
-.ant-tabs-bottom>div>.ant-tabs-nav {
+.ant-tabs-top > .ant-tabs-nav,
+.ant-tabs-bottom > .ant-tabs-nav,
+.ant-tabs-top > div > .ant-tabs-nav,
+.ant-tabs-bottom > div > .ant-tabs-nav {
   margin: 0 0 6px 0 !important;
 }
 </style>

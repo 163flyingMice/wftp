@@ -87,27 +87,33 @@ pub fn alive(name: String) -> String {
 
 #[tauri::command]
 pub fn connect(addr: String, user: String, pass: String) -> String {
-    let mut ftp_stream;
-    if let Ok(t) = FtpStream::connect(&addr) {
-        ftp_stream = t;
-        let _ = ftp_stream.login(&user, &pass);
-        let snow_id = get_snow_id();
-        OWNER_FTP_STREAM
-            .lock()
-            .unwrap()
-            .insert(snow_id.clone(), Some(ftp_stream));
-        serde_json::to_string(&Success::new(
-            CONNECTED_SUCCESS_CODE,
-            String::from("连接成功！"),
-            snow_id.clone(),
-        ))
-        .unwrap()
-    } else {
-        serde_json::to_string(&Error::new(
-            DISCONNECTED_ERROR_CODE,
-            CustomError::GetFtpstreamError.to_string(),
-        ))
-        .unwrap()
+    match FtpStream::connect(&addr) {
+        Ok(mut ftp_stream) => match ftp_stream.login(&user, &pass) {
+            Ok(_) => {
+                let snow_id = get_snow_id();
+                OWNER_FTP_STREAM
+                    .lock()
+                    .unwrap()
+                    .insert(snow_id.clone(), Some(ftp_stream));
+                return serde_json::to_string(&Success::new(
+                    CONNECTED_SUCCESS_CODE,
+                    String::from("连接成功！"),
+                    snow_id.clone(),
+                ))
+                .unwrap();
+            }
+            Err(err) => {
+                return serde_json::to_string(&Error::new(
+                    DISCONNECTED_ERROR_CODE,
+                    err.to_string(),
+                ))
+                .unwrap();
+            }
+        },
+        Err(err) => {
+            return serde_json::to_string(&Error::new(DISCONNECTED_ERROR_CODE, err.to_string()))
+                .unwrap();
+        }
     }
 }
 
@@ -122,173 +128,298 @@ pub fn try_connect(addr: String, username: String, password: String) -> String {
 }
 
 #[tauri::command]
-pub fn pwd(name: String) -> Option<String> {
-    if let Some(temp) = OWNER_FTP_STREAM.lock().unwrap().get_mut(&name) {
-        if let Some(ftp_stream) = temp {
-            let root = ftp_stream.pwd().unwrap();
-            return Some(root);
+pub fn pwd(name: String) -> String {
+    match OWNER_FTP_STREAM.lock() {
+        Ok(mut s) => {
+            if let Some(temp) = s.get_mut(&name) {
+                if let Some(ftp_stream) = temp {
+                    match ftp_stream.pwd() {
+                        Ok(root) => {
+                            return serde_json::to_string(&Success::new(
+                                200,
+                                String::from("获取成功！"),
+                                root,
+                            ))
+                            .unwrap();
+                        }
+                        Err(err) => {
+                            return serde_json::to_string(&Error::new(400, err.to_string()))
+                                .unwrap()
+                        }
+                    }
+                }
+            }
         }
+        Err(err) => return serde_json::to_string(&Error::new(400, err.to_string())).unwrap(),
     }
-    None
+    serde_json::to_string(&Error::new(400, String::from("获取失败！"))).unwrap()
 }
 
 #[tauri::command]
 pub fn prev(name: String) -> String {
-    if let Some(temp) = OWNER_FTP_STREAM.lock().unwrap().get_mut(&name) {
-        if let Some(ftp_stream) = temp {
-            match ftp_stream.cdup() {
-                Ok(_) => {
-                    return "更改文件夹成功！".to_string();
-                }
-                Err(err) => {
-                    return err.to_string();
+    match OWNER_FTP_STREAM.lock() {
+        Ok(mut s) => {
+            if let Some(temp) = s.get_mut(&name) {
+                if let Some(ftp_stream) = temp {
+                    match ftp_stream.cdup() {
+                        Ok(_) => {
+                            return serde_json::to_string(&Success::new(
+                                200,
+                                String::from("更改文件夹成功！"),
+                                String::from(""),
+                            ))
+                            .unwrap();
+                        }
+                        Err(err) => {
+                            return serde_json::to_string(&Error::new(400, err.to_string()))
+                                .unwrap()
+                        }
+                    }
                 }
             }
         }
+        Err(err) => return serde_json::to_string(&Error::new(400, err.to_string())).unwrap(),
     }
-    String::from("更改文件夹失败！")
+    return serde_json::to_string(&Error::new(400, String::from("更改文件夹失败！"))).unwrap();
 }
 
 #[tauri::command]
 pub fn cwd(name: String, path: String) -> String {
-    if let Some(temp) = OWNER_FTP_STREAM.lock().unwrap().get_mut(&name) {
-        if let Some(ftp_stream) = temp {
-            match ftp_stream.cwd(&path) {
-                Ok(_) => {
-                    return "更改文件夹成功！".to_string();
-                }
-                Err(err) => {
-                    return err.to_string();
+    match OWNER_FTP_STREAM.lock() {
+        Ok(mut s) => {
+            if let Some(temp) = s.get_mut(&name) {
+                if let Some(ftp_stream) = temp {
+                    match ftp_stream.cwd(&path) {
+                        Ok(_) => {
+                            return serde_json::to_string(&Success::new(
+                                200,
+                                String::from("更改文件夹成功！"),
+                                String::from(""),
+                            ))
+                            .unwrap();
+                        }
+                        Err(err) => {
+                            return serde_json::to_string(&Error::new(400, err.to_string()))
+                                .unwrap()
+                        }
+                    }
                 }
             }
         }
+        Err(err) => return serde_json::to_string(&Error::new(400, err.to_string())).unwrap(),
     }
-    String::from("更改文件夹失败！")
+    return serde_json::to_string(&Error::new(400, String::from("更改文件夹失败！"))).unwrap();
 }
 
 #[tauri::command]
-pub fn list(name: String) -> Option<Vec<FileList>> {
-    if let Some(temp) = OWNER_FTP_STREAM.lock().unwrap().get_mut(&name) {
-        if let Some(ftp_stream) = temp {
-            if let Ok(list) = ftp_stream.list(None) {
-                let mut file_list = vec![FileList::new()];
-                for param in &list {
-                    let temp = param
-                        .trim()
-                        .split(" ")
-                        .map(|s| s.to_string())
-                        .collect::<Vec<String>>();
-                    let temp_len = temp.len();
-                    let is_directory: String;
-                    let first_at = temp.iter().nth(0).unwrap().chars().next().unwrap();
-                    let mut name = HashMap::new();
-                    let temp_name = temp.iter().nth(temp_len - 1).unwrap().to_string();
-                    if first_at == 'd' {
-                        is_directory = "文件夹".to_string();
-                        name.insert(String::from("kind"), String::from("folder"));
-                    } else {
-                        let extens: Vec<&str> = temp_name.split(".").collect();
-                        is_directory =
-                            extens[(extens.len() - 1)].to_string().to_uppercase() + " 文件";
-                        name.insert(String::from("kind"), String::from("file"));
+pub fn list(name: String) -> String {
+    match OWNER_FTP_STREAM.lock() {
+        Ok(mut s) => {
+            if let Some(temp) = s.get_mut(&name) {
+                if let Some(ftp_stream) = temp {
+                    match ftp_stream.list(None) {
+                        Ok(list) => {
+                            let mut file_list = vec![FileList::new()];
+                            for param in &list {
+                                let temp = param
+                                    .trim()
+                                    .split(" ")
+                                    .map(|s| s.to_string())
+                                    .collect::<Vec<String>>();
+                                let temp_len = temp.len();
+                                let is_directory: String;
+                                let mut first_at: char = 'd';
+                                let mut perm: String = String::from("---------");
+                                if let Some(temp_f) = temp.iter().nth(0) {
+                                    perm = temp_f.to_string();
+                                    if let Some(temp_s) = temp_f.chars().next() {
+                                        first_at = temp_s;
+                                    }
+                                }
+                                let mut name = HashMap::new();
+                                let mut temp_name = String::from("不知名资源文件");
+                                if let Some(temp_f) = temp.iter().nth(temp_len - 1) {
+                                    temp_name = temp_f.to_string();
+                                }
+                                if first_at == 'd' {
+                                    is_directory = "文件夹".to_string();
+                                    name.insert(String::from("kind"), String::from("folder"));
+                                } else {
+                                    let extens: Vec<&str> = temp_name.split(".").collect();
+                                    is_directory =
+                                        extens[(extens.len() - 1)].to_string().to_uppercase()
+                                            + " 文件";
+                                    name.insert(String::from("kind"), String::from("file"));
+                                }
+                                name.insert(String::from("name"), temp_name);
+                                let mut size: usize = 0;
+                                let mut temp_size = "";
+                                if let Some(temp_f) = temp.iter().nth(temp_len - 6) {
+                                    temp_size = temp_f;
+                                }
+                                if temp_size != "0" && temp_size != "" {
+                                    if let Ok(temp_f) = temp_size.parse::<usize>() {
+                                        size = temp_f;
+                                    }
+                                }
+                                let mut owner: String = String::from("");
+                                if let Some(temp_f) = temp.iter().nth(2) {
+                                    owner = temp_f.to_string();
+                                }
+                                let mut group: String = String::from("");
+                                if let Some(temp_f) = temp.iter().nth(3) {
+                                    group = temp_f.to_string();
+                                }
+                                let mut modified = String::from("");
+                                if let Some(temp_f) = temp.iter().nth(temp_len - 4) {
+                                    modified = modified + " " + temp_f;
+                                }
+                                if let Some(temp_f) = temp.iter().nth(temp_len - 3) {
+                                    modified = modified + " " + temp_f;
+                                }
+                                if let Some(temp_f) = temp.iter().nth(temp_len - 2) {
+                                    modified = modified + " " + temp_f;
+                                }
+                                file_list.push(FileList {
+                                    permissions: perm,
+                                    owner: owner,
+                                    group: group,
+                                    size: size,
+                                    is_directory: is_directory,
+                                    update_at: modified,
+                                    name: name,
+                                });
+                            }
+                            return serde_json::to_string(&Success::new(
+                                200,
+                                String::from("获取成功！"),
+                                file_list,
+                            ))
+                            .unwrap();
+                        }
+                        Err(err) => {
+                            return serde_json::to_string(&Error::new(400, err.to_string()))
+                                .unwrap();
+                        }
                     }
-                    name.insert(String::from("name"), temp_name);
-                    let size: usize;
-                    let temp_size = temp.iter().nth(temp_len - 6).unwrap();
-                    if temp_size != "0" && temp_size != "" {
-                        size = temp_size.parse::<usize>().unwrap();
-                    } else {
-                        size = 0;
-                    }
-                    file_list.push(FileList {
-                        permissions: temp.iter().nth(0).unwrap().to_string(),
-                        owner: temp.iter().nth(2).unwrap().to_string(),
-                        group: temp.iter().nth(3).unwrap().to_string(),
-                        size: size,
-                        is_directory: is_directory,
-                        update_at: temp.iter().nth(temp_len - 4).unwrap().to_string()
-                            + " "
-                            + temp.iter().nth(temp_len - 3).unwrap()
-                            + " "
-                            + temp.iter().nth(temp_len - 2).unwrap(),
-                        name: name,
-                    });
                 }
-                return Some(file_list);
             }
         }
+        Err(err) => {
+            return serde_json::to_string(&Error::new(400, err.to_string())).unwrap();
+        }
     }
-    None
+    return serde_json::to_string(&Error::new(400, String::from("获取失败！"))).unwrap();
 }
 
 #[tauri::command]
-pub fn folder_list(name: String) -> Option<FolderTree> {
-    if let Some(temp) = OWNER_FTP_STREAM.lock().unwrap().get_mut(&name) {
-        if let Some(ftp_stream) = temp {
-            if let Ok(list) = ftp_stream.list(None) {
-                let mut folder_tree = FolderTree::new();
-                let mut folder_leaf = Vec::new();
-                let mut num = 0;
-                for param in &list {
-                    let temp = param
-                        .trim()
-                        .split(" ")
-                        .map(|s| s.to_string())
-                        .collect::<Vec<String>>();
-                    let temp_len = temp.len();
-                    folder_leaf.push(FolderLeaf {
-                        title: Some(temp.iter().nth(temp_len - 1).unwrap().to_string()),
-                        key: String::from(String::from("0-") + &(num.clone().to_string())),
-                    });
-                    num += 1;
+pub fn folder_list(name: String) -> String {
+    match OWNER_FTP_STREAM.lock() {
+        Ok(mut s) => {
+            if let Some(temp) = s.get_mut(&name) {
+                if let Some(ftp_stream) = temp {
+                    match ftp_stream.list(None) {
+                        Ok(list) => {
+                            let mut folder_tree = FolderTree::new();
+                            let mut folder_leaf = Vec::new();
+                            let mut num = 0;
+                            for param in &list {
+                                let temp = param
+                                    .trim()
+                                    .split(" ")
+                                    .map(|s| s.to_string())
+                                    .collect::<Vec<String>>();
+                                let temp_len = temp.len();
+                                let mut title = String::from("");
+                                if let Some(temp_f) = temp.iter().nth(temp_len - 1) {
+                                    title = temp_f.to_string();
+                                }
+                                folder_leaf.push(FolderLeaf {
+                                    title: Some(title),
+                                    key: String::from(
+                                        String::from("0-") + &(num.clone().to_string()),
+                                    ),
+                                });
+                                num += 1;
+                            }
+                            folder_tree.children = Some(folder_leaf);
+                            return serde_json::to_string(&Success::new(
+                                200,
+                                String::from("获取成功！"),
+                                folder_tree,
+                            ))
+                            .unwrap();
+                        }
+                        Err(err) => {
+                            return serde_json::to_string(&Error::new(400, err.to_string()))
+                                .unwrap();
+                        }
+                    }
                 }
-                folder_tree.children = Some(folder_leaf);
-                Some(folder_tree)
-            } else {
-                None
             }
-        } else {
-            None
         }
-    } else {
-        None
+        Err(err) => {
+            return serde_json::to_string(&Error::new(400, err.to_string())).unwrap();
+        }
     }
+    return serde_json::to_string(&Error::new(400, String::from("获取失败！"))).unwrap();
 }
 
 #[tauri::command]
 pub fn rename_file(name: String, from_name: String, to_name: String) -> String {
-    if let Some(temp) = OWNER_FTP_STREAM.lock().unwrap().get_mut(&name) {
-        if let Some(ftp_stream) = temp {
-            match ftp_stream.rename(&from_name, &to_name) {
-                Ok(_) => {
-                    return "更改文件夹名称成功！".to_string();
-                }
-                Err(err) => {
-                    return err.to_string();
+    match OWNER_FTP_STREAM.lock() {
+        Ok(mut s) => {
+            if let Some(temp) = s.get_mut(&name) {
+                if let Some(ftp_stream) = temp {
+                    match ftp_stream.rename(&from_name, &to_name) {
+                        Ok(_) => {
+                            return serde_json::to_string(&Success::new(
+                                200,
+                                String::from("更改文件夹名称成功！"),
+                                "",
+                            ))
+                            .unwrap();
+                        }
+                        Err(err) => {
+                            return serde_json::to_string(&Error::new(400, err.to_string()))
+                                .unwrap();
+                        }
+                    }
                 }
             }
         }
+        Err(err) => {
+            return serde_json::to_string(&Error::new(400, err.to_string())).unwrap();
+        }
     }
-    String::from("更改文件夹名称失败！")
+    return serde_json::to_string(&Error::new(400, String::from("更改文件夹名称失败！"))).unwrap();
 }
 
 #[tauri::command]
 pub fn remove_file(name: String, filename: String) -> String {
-    if let Some(temp) = OWNER_FTP_STREAM.lock().unwrap().get_mut(&name) {
-        if let Some(ftp_stream) = temp {
-            match ftp_stream.rm(&filename) {
-                Ok(_) => {
-                    return serde_json::to_string(&Success::new(
-                        200,
-                        String::from("删除文件成功！"),
-                        (),
-                    ))
-                    .unwrap();
-                }
-                Err(err) => {
-                    return serde_json::to_string(&Error::new(502, err.to_string())).unwrap();
+    match OWNER_FTP_STREAM.lock() {
+        Ok(mut s) => {
+            if let Some(temp) = s.get_mut(&name) {
+                if let Some(ftp_stream) = temp {
+                    match ftp_stream.rm(&filename) {
+                        Ok(_) => {
+                            return serde_json::to_string(&Success::new(
+                                200,
+                                String::from("删除文件成功！"),
+                                (),
+                            ))
+                            .unwrap();
+                        }
+                        Err(err) => {
+                            return serde_json::to_string(&Error::new(502, err.to_string()))
+                                .unwrap();
+                        }
+                    }
                 }
             }
+        }
+        Err(err) => {
+            return serde_json::to_string(&Error::new(502, err.to_string())).unwrap();
         }
     }
     return serde_json::to_string(&Error::new(502, String::from("删除文件失败！"))).unwrap();
@@ -296,88 +427,164 @@ pub fn remove_file(name: String, filename: String) -> String {
 
 #[tauri::command]
 pub fn remove_dir(name: String, path: String) -> String {
-    if let Some(temp) = OWNER_FTP_STREAM.lock().unwrap().get_mut(&name) {
-        if let Some(ftp_stream) = temp {
-            match ftp_stream.rmdir(&path) {
-                Ok(_) => {
-                    return ("删除文件夹".to_string() + &path + "成功！").to_string();
-                }
-                Err(err) => {
-                    return err.to_string();
+    match OWNER_FTP_STREAM.lock() {
+        Ok(mut s) => {
+            if let Some(temp) = s.get_mut(&name) {
+                if let Some(ftp_stream) = temp {
+                    match ftp_stream.rmdir(&path) {
+                        Ok(_) => {
+                            return serde_json::to_string(&Success::new(
+                                200,
+                                String::from("删除文件夹".to_string() + &path + "成功！"),
+                                (),
+                            ))
+                            .unwrap();
+                        }
+                        Err(err) => {
+                            return serde_json::to_string(&Error::new(502, err.to_string()))
+                                .unwrap();
+                        }
+                    }
                 }
             }
         }
+        Err(err) => {
+            return serde_json::to_string(&Error::new(502, err.to_string())).unwrap();
+        }
     }
-    String::from("删除文件夹失败！")
+    return serde_json::to_string(&Error::new(502, String::from("删除文件夹失败！"))).unwrap();
 }
 
 #[tauri::command]
 pub fn mk_dir(name: String, path: String) -> String {
-    if let Some(temp) = OWNER_FTP_STREAM.lock().unwrap().get_mut(&name) {
-        if let Some(ftp_stream) = temp {
-            match ftp_stream.mkdir(&path) {
-                Ok(_) => {
-                    return ("创建文件夹".to_string() + &path + "成功！").to_string();
-                }
-                Err(err) => {
-                    return err.to_string();
+    match OWNER_FTP_STREAM.lock() {
+        Ok(mut s) => {
+            if let Some(temp) = s.get_mut(&name) {
+                if let Some(ftp_stream) = temp {
+                    match ftp_stream.mkdir(&path) {
+                        Ok(_) => {
+                            return serde_json::to_string(&Success::new(
+                                200,
+                                String::from("创建文件夹".to_string() + &path + "成功！"),
+                                (),
+                            ))
+                            .unwrap();
+                        }
+                        Err(err) => {
+                            return serde_json::to_string(&Error::new(502, err.to_string()))
+                                .unwrap();
+                        }
+                    }
                 }
             }
         }
+        Err(err) => {
+            return serde_json::to_string(&Error::new(502, err.to_string())).unwrap();
+        }
     }
-    String::from("创建文件夹失败！")
+    return serde_json::to_string(&Error::new(502, String::from("创建文件夹失败！"))).unwrap();
 }
 
 #[tauri::command]
 pub fn mk_file(name: String, filename: String) -> String {
-    if let Some(temp) = OWNER_FTP_STREAM.lock().unwrap().get_mut(&name) {
-        if let Some(ftp_stream) = temp {
-            let mut b = "".as_bytes();
-            match ftp_stream.put(&filename, &mut b) {
-                Ok(_) => {
-                    return ("创建文件".to_string() + &filename + "成功！").to_string();
-                }
-                Err(err) => {
-                    return err.to_string();
+    match OWNER_FTP_STREAM.lock() {
+        Ok(mut s) => {
+            if let Some(temp) = s.get_mut(&name) {
+                if let Some(ftp_stream) = temp {
+                    let mut b = "".as_bytes();
+                    match ftp_stream.put(&filename, &mut b) {
+                        Ok(_) => {
+                            return serde_json::to_string(&Success::new(
+                                200,
+                                String::from("创建文件".to_string() + &filename + "成功！"),
+                                (),
+                            ))
+                            .unwrap();
+                        }
+                        Err(err) => {
+                            return serde_json::to_string(&Error::new(502, err.to_string()))
+                                .unwrap();
+                        }
+                    }
                 }
             }
         }
+        Err(err) => {
+            return serde_json::to_string(&Error::new(502, err.to_string())).unwrap();
+        }
     }
-    String::from("创建文件失败！")
+    return serde_json::to_string(&Error::new(502, String::from("创建文件失败！"))).unwrap();
 }
 
 #[tauri::command]
 pub fn upload(name: String, filename: String, content: String) -> String {
-    if let Some(temp) = OWNER_FTP_STREAM.lock().unwrap().get_mut(&name) {
-        if let Some(ftp_stream) = temp {
-            let temp = decode(content).unwrap();
-            let mut b = temp.as_slice();
-            match ftp_stream.put(&filename, &mut b) {
-                Ok(_) => {
-                    return ("上传文件".to_string() + &filename + "成功！").to_string();
-                }
-                Err(err) => {
-                    return err.to_string();
+    match OWNER_FTP_STREAM.lock() {
+        Ok(mut s) => {
+            if let Some(temp) = s.get_mut(&name) {
+                if let Some(ftp_stream) = temp {
+                    println!("{:?}", content);
+                    match decode(content) {
+                        Ok(temp) => {
+                            println!("{:?}", temp);
+                            let mut b = temp.as_slice();
+                            match ftp_stream.put(&filename, &mut b) {
+                                Ok(_) => {
+                                    return serde_json::to_string(&Success::new(
+                                        200,
+                                        String::from("上传文件".to_string() + &filename + "成功！"),
+                                        (),
+                                    ))
+                                    .unwrap();
+                                }
+                                Err(err) => {
+                                    return serde_json::to_string(&Error::new(
+                                        502,
+                                        err.to_string(),
+                                    ))
+                                    .unwrap();
+                                }
+                            }
+                        }
+                        Err(err) => {
+                            return serde_json::to_string(&Error::new(502, err.to_string()))
+                                .unwrap();
+                        }
+                    }
                 }
             }
         }
+        Err(err) => {
+            return serde_json::to_string(&Error::new(502, err.to_string())).unwrap();
+        }
     }
-    String::from("上传文件失败！")
+    return serde_json::to_string(&Error::new(502, String::from("上传文件失败！"))).unwrap();
 }
 
 #[tauri::command]
 pub fn quit(name: String) -> String {
-    if let Some(temp) = OWNER_FTP_STREAM.lock().unwrap().get_mut(&name) {
-        if let Some(ftp_stream) = temp {
-            let _ = ftp_stream.quit();
-            return String::from("已断开连接!");
+    match OWNER_FTP_STREAM.lock() {
+        Ok(mut s) => {
+            if let Some(temp) = s.get_mut(&name) {
+                if let Some(ftp_stream) = temp {
+                    let _ = ftp_stream.quit();
+                    return serde_json::to_string(&Success::new(
+                        200,
+                        String::from("已断开连接"),
+                        (),
+                    ))
+                    .unwrap();
+                }
+            }
+        }
+        Err(err) => {
+            return serde_json::to_string(&Error::new(502, err.to_string())).unwrap();
         }
     }
-    String::from("出现异常!")
+    return serde_json::to_string(&Error::new(502, String::from("出现异常"))).unwrap();
 }
 
 #[tauri::command]
-pub fn size_sort(mut file_list: Option<Vec<FileList>>, sort_way: bool) -> Option<Vec<FileList>> {
+pub fn size_sort(mut file_list: Option<Vec<FileList>>, sort_way: bool) -> String {
     if let Some(list) = file_list.as_mut() {
         let mut len = list.len();
         while len > 1 {
@@ -396,7 +603,13 @@ pub fn size_sort(mut file_list: Option<Vec<FileList>>, sort_way: bool) -> Option
             len -= 1;
             list.swap(pos_max, len);
         }
-        return Some(list.to_vec());
+        return serde_json::to_string(&Success::new(
+            200,
+            String::from("排序成功！"),
+            list.to_vec(),
+        ))
+        .unwrap();
     }
-    None
+    return serde_json::to_string(&Success::new(200, String::from("排序成功！"), vec![""]))
+        .unwrap();
 }

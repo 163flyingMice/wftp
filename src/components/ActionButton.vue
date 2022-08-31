@@ -12,37 +12,66 @@
     </a-button>
     <template #overlay>
       <a-menu>
-        <a-menu-item v-for="(placement, index) in wftpServer" :key="index" @click="connect(index)">
+        <a-menu-item
+          v-for="(placement, index) in wftpServer"
+          :key="index"
+          @click="connect(index)"
+        >
           {{ placement.Name }}
         </a-menu-item>
       </a-menu>
     </template>
   </a-dropdown>
 
-  <a-button style="margin-left: 6px" size="small" type="default" :onclick="changeStateList"
-    :class="{ 'selected-button': stateListComponent }">
+  <a-button
+    style="margin-left: 6px"
+    size="small"
+    type="default"
+    :onclick="changeStateList"
+    :class="{ 'selected-button': stateListComponent }"
+  >
     <template #icon>
       <PicCenterOutlined />
     </template>
   </a-button>
-  <a-button size="small" type="default" :onclick="changeLocalSite" :class="{ 'selected-button': localSiteComponent }">
+  <a-button
+    size="small"
+    type="default"
+    :onclick="changeLocalSite"
+    :class="{ 'selected-button': localSiteComponent }"
+  >
     <template #icon>
       <PicLeftOutlined />
     </template>
   </a-button>
-  <a-button size="small" type="default" :onclick="changeRemoteSite" :class="{ 'selected-button': remoteSiteComponent }">
+  <a-button
+    size="small"
+    type="default"
+    :onclick="changeRemoteSite"
+    :class="{ 'selected-button': remoteSiteComponent }"
+  >
     <template #icon>
       <PicRightOutlined />
     </template>
   </a-button>
-  <a-button size="small" type="default" :onclick="changeTransfeList"
-    :class="{ 'selected-button': transfeListComponent }">
+  <a-button
+    size="small"
+    type="default"
+    :onclick="changeTransfeList"
+    :class="{ 'selected-button': transfeListComponent }"
+  >
     <template #icon>
       <swap-outlined />
     </template>
   </a-button>
   <div class="line"></div>
-  <a-button style="margin-left: 6px" :disabled="noConnect" size="small" type="default" :onclick="refreshRemote">
+  <a-button
+    style="margin-left: 6px"
+    :disabled="noConnect"
+    size="small"
+    type="default"
+    :onclick="refreshRemote"
+  >
     <template #icon>
       <redo-outlined />
     </template>
@@ -107,13 +136,14 @@ export default {
       store.state.transfeListComponent = !store.state.transfeListComponent;
     },
     connect(index) {
-      let key = store.state.panes.length != 0 ? store.state.panes.length + 1 : 1
+      let key = store.state.panes.length != 0 ? store.state.panes.length + 1 : 1;
       store.state.panes.push({
         title: this.wftpServer[index].Name,
         key: key,
         data: this.wftpServer[index],
-      })
-      store.state.listActiveKey = key
+      });
+      store.state.listActiveKey = key;
+      this.refreshRemote();
     },
   },
 };
