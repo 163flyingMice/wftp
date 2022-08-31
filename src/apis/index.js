@@ -18,7 +18,7 @@ let funcMap = {
     "pwd": ["sftp_pwd", "pwd"],
     "rename_file": ["sftp_rename", "rename_file"],
     "size_sort": ["size_sort", "size_sort"],
-    "upload": ["upload", "upload"],
+    "upload": ["sftp_upload", "upload"],
 };
 
 

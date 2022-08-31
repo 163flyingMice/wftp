@@ -1,5 +1,7 @@
+use base64_stream::base64::decode;
 use ssh2::{FileStat, Session, Sftp};
 use std::collections::HashMap;
+use std::io::Write;
 use std::net::TcpStream;
 use std::path::Path;
 use std::sync::Mutex;
@@ -162,16 +164,10 @@ pub fn readdir(name: String) -> String {
                                         name: name,
                                     })
                                 }
-                                return serde_json::to_string(&Success::new(
-                                    200,
-                                    String::from("获取成功！"),
-                                    file_list,
-                                ))
-                                .unwrap();
+                                return Success::new(200, "获取成功！", file_list).out();
                             }
                             Err(err) => {
-                                return serde_json::to_string(&Error::new(400, err.to_string()))
-                                    .unwrap();
+                                return Error::new(400, err).out();
                             }
                         }
                     }
@@ -179,10 +175,10 @@ pub fn readdir(name: String) -> String {
             }
         }
         Err(err) => {
-            return serde_json::to_string(&Error::new(400, err.to_string())).unwrap();
+            return Error::new(400, err).out();
         }
     }
-    return serde_json::to_string(&Error::new(400, String::from("获取失败！"))).unwrap();
+    return Error::new(400, "获取失败！").out();
 }
 
 #[tauri::command]
@@ -564,8 +560,71 @@ pub fn sftp_pwd(name: String) -> String {
             }
         }
         Err(err) => {
-            return serde_json::to_string(&Success::new(400, err.to_string(), ())).unwrap();
+            return Error::new(400, err).out();
         }
     }
-    return serde_json::to_string(&Error::new(400, String::from("获取失败！"))).unwrap();
+    return Error::new(400, "获取失败！").out();
+}
+
+#[tauri::command]
+pub fn sftp_upload(name: String, mut filename: String, content: String) -> String {
+    match SFTP_VEC.lock() {
+        Ok(mut s) => {
+            if let Some(temp) = s.get_mut(&name) {
+                if let Some(sftp_temp) = temp {
+                    if let Some(sftp) = sftp_temp.sftp.as_mut() {
+                        if sftp_temp.current_path != "/" {
+                            filename = sftp_temp.current_path.to_string() + "/" + &filename;
+                        } else {
+                            filename = sftp_temp.current_path.to_string() + &filename;
+                        }
+                        match sftp.create(Path::new(&filename)) {
+                            Ok(mut file) => match decode(content) {
+                                Ok(resource) => {
+                                    let b = resource.as_slice();
+                                    match file.write(b) {
+                                        Ok(_) => {
+                                            let _ = file.flush();
+                                            return serde_json::to_string(&Success::new(
+                                                200,
+                                                String::from(
+                                                    "上传文件".to_string() + &filename + "成功！",
+                                                ),
+                                                (),
+                                            ))
+                                            .unwrap();
+                                        }
+                                        Err(err) => {
+                                            let _ = sftp.unlink(Path::new(&filename));
+                                            return serde_json::to_string(&Error::new(
+                                                400,
+                                                err.to_string(),
+                                            ))
+                                            .unwrap();
+                                        }
+                                    };
+                                }
+                                Err(err) => {
+                                    return serde_json::to_string(&Error::new(
+                                        400,
+                                        err.to_string(),
+                                    ))
+                                    .unwrap();
+                                }
+                            },
+                            Err(err) => {
+                                let _ = sftp.unlink(Path::new(&filename));
+                                return serde_json::to_string(&Error::new(400, err.to_string()))
+                                    .unwrap();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Err(err) => {
+            return serde_json::to_string(&Error::new(502, err.to_string())).unwrap();
+        }
+    }
+    return serde_json::to_string(&Error::new(502, String::from("上传文件失败！"))).unwrap();
 }

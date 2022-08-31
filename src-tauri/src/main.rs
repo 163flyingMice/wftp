@@ -22,7 +22,7 @@ use tauri::generate_context;
 
 use crate::sftp::{
     readdir, sftp_connect, sftp_create, sftp_cwd, sftp_folder_list, sftp_mkdir, sftp_prev,
-    sftp_pwd, sftp_rename, sftp_rmdir, sftp_unlink,
+    sftp_pwd, sftp_rename, sftp_rmdir, sftp_unlink, sftp_upload,
 };
 
 fn main() {
@@ -60,6 +60,7 @@ fn main() {
             sftp_create,
             sftp_rmdir,
             sftp_unlink,
+            sftp_upload,
         ])
         .menu(menu::init())
         .on_menu_event(menu::handler)

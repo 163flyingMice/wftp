@@ -525,7 +525,6 @@ pub fn upload(name: String, filename: String, content: String) -> String {
                     println!("{:?}", content);
                     match decode(content) {
                         Ok(temp) => {
-                            println!("{:?}", temp);
                             let mut b = temp.as_slice();
                             match ftp_stream.put(&filename, &mut b) {
                                 Ok(_) => {

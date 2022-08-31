@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use std::fmt;
+use std::fmt::{self, Display};
 
 use serde::{Deserialize, Serialize};
 
@@ -24,19 +24,27 @@ impl fmt::Display for CustomError {
 }
 
 #[derive(Serialize, Debug, Deserialize)]
-pub struct Success<T> {
+pub struct Success<E> {
     pub code: usize,
     pub msg: String,
-    pub list: T,
+    pub list: E,
 }
 
-impl<T> Success<T> {
-    pub fn new(code: usize, msg: String, list: T) -> Self {
+impl<E: Serialize> Success<E> {
+    pub fn new<T>(code: usize, msg: T, list: E) -> Self
+    where
+        T: Display,
+        E: Serialize,
+    {
         Success {
             code: code,
-            msg: msg,
+            msg: msg.to_string(),
             list: list,
         }
+    }
+
+    pub fn out(&self) -> String {
+        serde_json::to_string(self).unwrap()
     }
 }
 
@@ -48,10 +56,17 @@ pub struct Error {
 }
 
 impl Error {
-    pub fn new(code: usize, msg: String) -> Self {
+    pub fn new<T>(code: usize, msg: T) -> Self
+    where
+        T: Display,
+    {
         Error {
             code: code,
-            msg: msg,
+            msg: msg.to_string(),
         }
+    }
+
+    pub fn out(&self) -> String {
+        serde_json::to_string(self).unwrap()
     }
 }
