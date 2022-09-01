@@ -433,6 +433,26 @@ pub fn sftp_cwd(name: String, path: String) -> String {
                         if sftp_temp.current_path != "/" {
                             sftp_temp.current_path =
                                 sftp_temp.current_path.as_mut().to_string() + "/" + &path;
+                            let mut flag: bool = false;
+                            let s = sftp_temp
+                                .current_path
+                                .split("/")
+                                .map(|s| s.to_string())
+                                .collect::<Vec<String>>();
+                            let mut new = Vec::new();
+                            for elem in s.into_iter() {
+                                if elem == ".." {
+                                    flag = true;
+                                    new.pop();
+                                    continue;
+                                }
+                                if elem != "" {
+                                    new.push(elem);
+                                }
+                            }
+                            if flag {
+                                sftp_temp.current_path = String::from("/") + &new.join("/");
+                            }
                         } else {
                             sftp_temp.current_path =
                                 sftp_temp.current_path.as_mut().to_string() + &path;
@@ -570,6 +590,33 @@ pub fn sftp_download(name: String, mut filename: String) -> String {
                                     }
                                     Err(err) => return Error::new(401, err).out(),
                                 }
+                            }
+                            Err(err) => return Error::new(402, err).out(),
+                        }
+                    }
+                }
+            }
+        }
+        Err(err) => return Error::new(403, err).out(),
+    }
+    return Error::new(502, "下载文件失败！").out();
+}
+
+#[tauri::command]
+pub fn sftp_dir_download(name: String, mut path: String) -> String {
+    match SFTP_VEC.lock() {
+        Ok(mut s) => {
+            if let Some(temp) = s.get_mut(&name) {
+                if let Some(sftp_temp) = temp {
+                    if let Some(sftp) = sftp_temp.sftp.as_mut() {
+                        if sftp_temp.current_path != "/" {
+                            path = sftp_temp.current_path.to_string() + "/" + &path;
+                        } else {
+                            path = sftp_temp.current_path.to_string() + &path;
+                        }
+                        match sftp.readdir(Path::new(&path)) {
+                            Ok(result) => {
+                                println!("{:?}", result);
                             }
                             Err(err) => return Error::new(402, err).out(),
                         }

@@ -20,6 +20,7 @@ let funcMap = {
     "size_sort": ["size_sort", "size_sort"],
     "upload": ["sftp_upload", "upload"],
     "download": ["sftp_download", "download"],
+    "dir_download": ["sftp_dir_download", "dir_download"],
 };
 
 
@@ -141,6 +142,15 @@ export async function upload(filename, content) {
         content: content,
     })
 }
+
+export async function dir_download(path) {
+    connected = getProtocol();
+    return await invoke(funcMap["dir_download"][connected.data.Protocol], {
+        name: connected.connectedId,
+        path: path,
+    })
+}
+
 
 export async function download(filename) {
     connected = getProtocol();

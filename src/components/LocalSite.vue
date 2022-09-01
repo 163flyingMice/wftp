@@ -5,22 +5,15 @@
       <div style="width: 100%; cursor: move">{{ modalTitle }}</div>
     </template>
   </a-modal>
-  <a-row v-show="state">
-    <a-col style="min-width: 100px !important; width: 100%">
+  <a-row v-show="state" style="
+            max-height: 144px !important;
+            min-height: 144px !important;">
+    <a-col style="min-width: 100px !important; width: 100%;">
       <div>
         <a-input :value="currentPath" addon-before="本地站点：" />
-        <a-tree
-          v-if="treeData.length > 0"
-          style="
-            overflow-y: auto;
-            max-height: 100px !important;
-            min-height: 100px !important;
-          "
-          :show-icon="true"
-          :tree-data="treeData"
-          @select="changeLocal"
-          :default-expanded-keys="['0']"
-        >
+        <a-tree style="overflow-y: auto;max-height: 100px !important;min-height: 100px !important;"
+          v-if="treeData.length > 0" :show-icon="true" :tree-data="treeData" @select="changeLocal"
+          :default-expanded-keys="['0']">
           <template #title="dataRef">
             {{ dataRef.title }}
           </template>
@@ -33,36 +26,17 @@
   </a-row>
   <a-row style="min-height: 300px; max-height: 300px; overflow: auto">
     <a-col>
-      <a-table
-        class="localTable"
-        v-mouse-menu="options"
-        :columns="columns"
-        :data-source="dataSource"
-        :pagination="false"
-        :customRow="customRow"
-        :scroll="{ x: 600 }"
-        style=""
-        :customHeaderRow="customHeaderRow"
-      >
+      <a-table class="localTable" v-mouse-menu="options" :columns="columns" :data-source="dataSource"
+        :pagination="false" :customRow="customRow" :scroll="{ x: 600 }" style="" :customHeaderRow="customHeaderRow">
         <template #bodyCell="{ column, text }">
           <template v-if="column.dataIndex === 'name'">
-            <folder-open-outlined
-              :style="{ color: '#ffe896' }"
-              v-if="text.kind === 'folder'"
-            />
+            <folder-open-outlined :style="{ color: '#ffe896' }" v-if="text.kind === 'folder'" />
             <file-outlined v-else />
-            <a-input
-              class="showInput"
-              v-if="text.showInput"
-              v-model:value="toName"
-              :bordered="false"
-              placeholder=""
-              @pressEnter.prevent="renameInput"
-              @focus.prevent="handleFocus"
-              style="display: inline-block; width: 80px"
-            />
+            <a-input class="showInput" v-if="text.showInput" v-model:value="toName" :bordered="false" placeholder=""
+              @pressEnter.prevent="renameInput" @focus.prevent="handleFocus"
+              style="display: inline-block; width: 80px" />
             <text v-else :title="text.name">{{
-              text.name.length > 20 ? text.name.slice(0, 20) + "..." : text.name
+                text.name.length > 20 ? text.name.slice(0, 20) + "..." : text.name
             }}</text>
           </template>
         </template>
@@ -562,14 +536,14 @@ export default {
   font-size: 10px !important;
 }
 
-.ant-table-thead > tr > th,
-.ant-table-tbody > tr > td,
-.ant-table tfoot > tr > th,
-.ant-table tfoot > tr > td {
+.ant-table-thead>tr>th,
+.ant-table-tbody>tr>td,
+.ant-table tfoot>tr>th,
+.ant-table tfoot>tr>td {
   padding: 2px 5px !important;
 }
 
-.ant-table-container table > thead > tr:first-child th {
+.ant-table-container table>thead>tr:first-child th {
   font-weight: bolder;
 }
 

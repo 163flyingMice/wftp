@@ -5,23 +5,15 @@
       <div style="width: 100%; cursor: move">{{ modalTitle }}</div>
     </template>
   </a-modal>
-  <a-row v-show="state">
-    <a-col style="min-width: 100px !important; width: 100%">
+  <a-row v-show="state" style="
+            max-height: 144px !important;
+            min-height: 144px !important;">
+    <a-col style="min-width: 100px !important; width: 100%;">
       <div>
         <a-input :value="remotePath" addon-before="远程站点：" />
-        <a-tree
-          v-if="treeData.length > 0"
-          style="
-            overflow-y: auto;
-            max-height: 100px !important;
-            min-height: 100px !important;
-          "
-          :default-expanded-keys="['0']"
-          :show-line="true"
-          :tree-data="treeData"
-          @select="onSelect"
-          :showIcon="false"
-        >
+        <a-tree v-if="treeData.length > 0"
+          style="overflow-y: auto;max-height: 100px !important;min-height: 100px !important;"
+          :default-expanded-keys="['0']" :show-line="true" :tree-data="treeData" @select="onSelect" :showIcon="false">
           <template #title="{ dataRef }">
             {{ dataRef.title }}
           </template>
@@ -29,39 +21,19 @@
       </div>
     </a-col>
   </a-row>
-  <a-row
-    style="min-height: 300px !important; max-height: 300px !important; overflow: auto"
-    class="remoteTable"
-  >
+  <a-row style="min-height: 300px !important; max-height: 300px !important; overflow: auto" class="remoteTable">
     <a-col style="">
-      <a-table
-        :customHeaderRow="customHeaderRow"
-        v-mouse-menu="options"
-        :columns="columns"
-        :data-source="dataSource"
-        :pagination="false"
-        :customRow="customRow"
-        :scroll="{ x: 800 }"
-      >
+      <a-table :customHeaderRow="customHeaderRow" v-mouse-menu="options" :columns="columns" :data-source="dataSource"
+        :pagination="false" :customRow="customRow" :scroll="{ x: 800 }">
         <template #bodyCell="{ column, text }">
           <template v-if="column.dataIndex === 'name'">
-            <folder-open-outlined
-              :style="{ color: '#ffe896' }"
-              v-if="text.kind === 'folder'"
-            />
+            <folder-open-outlined :style="{ color: '#ffe896' }" v-if="text.kind === 'folder'" />
             <file-outlined v-else />
-            <a-input
-              class="showInput"
-              v-if="text.showInput"
-              v-model:value="toName"
-              :bordered="false"
-              placeholder=""
-              @pressEnter.prevent="renameInput"
-              @focus.prevent="handleFocus"
-              style="display: inline-block; width: 80px"
-            />
+            <a-input class="showInput" v-if="text.showInput" v-model:value="toName" :bordered="false" placeholder=""
+              @pressEnter.prevent="renameInput" @focus.prevent="handleFocus"
+              style="display: inline-block; width: 80px" />
             <text v-else :title="text.name">{{
-              text.name.length > 20 ? text.name.slice(0, 20) + "..." : text.name
+                text.name.length > 20 ? text.name.slice(0, 20) + "..." : text.name
             }}</text>
           </template>
         </template>
@@ -94,6 +66,7 @@ import {
   size_sort,
   getProtocol,
   download,
+  dir_download,
 } from "../apis/index";
 import { writeBinaryFile } from "@tauri-apps/api/fs";
 export default {
@@ -138,6 +111,18 @@ export default {
             fn: () => {
               switch (this.selected.kind) {
                 case "folder":
+                  dir_download(this.selected.name).then((response) => {
+                    let res = JSON.parse(response);
+                    if (res.code == 200) {
+                      console.log(response);
+                      // writeBinaryFile(path, new Uint8Array(res.list)).then(() => {
+                      //   this.refreshLocal();
+                      //   store.state.stateList.push(
+                      //     "响应：下载文件“" + this.selected.name + "”成功！"
+                      //   );
+                      // });
+                    }
+                  });
                   break;
                 default:
                   store.state.stateList.push(
@@ -308,7 +293,7 @@ export default {
           {
             label: "文件权限",
             tips: "Permissions",
-            fn: () => {},
+            fn: () => { },
             disabled: () => {
               return true;
             },
@@ -409,9 +394,11 @@ export default {
         readdir(this.currentPath).then((response) => {
           let res = JSON.parse(response);
           if (res.code == 200) {
+            store.state.stateList.push("命令：列出“" + this.remotePath + "”的目录成功！");
             this.dataSource = [];
             this.dataSource = res.list;
           } else {
+            store.state.stateList.push("状态：" + res.msg);
             prev().then(() => {
               pwd().then((response) => {
                 let res = JSON.parse(response);
@@ -438,7 +425,6 @@ export default {
                 });
               }
             });
-            store.state.stateList.push("状态：" + res.msg);
           }
         });
       }
@@ -579,14 +565,14 @@ export default {
   font-size: 10px !important;
 }
 
-.ant-table-thead > tr > th,
-.ant-table-tbody > tr > td,
-.ant-table tfoot > tr > th,
-.ant-table tfoot > tr > td {
+.ant-table-thead>tr>th,
+.ant-table-tbody>tr>td,
+.ant-table tfoot>tr>th,
+.ant-table tfoot>tr>td {
   padding: 2px 5px !important;
 }
 
-.ant-table-container table > thead > tr:first-child th {
+.ant-table-container table>thead>tr:first-child th {
   font-weight: bolder;
 }
 
