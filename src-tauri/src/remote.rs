@@ -70,19 +70,10 @@ impl FileList {
 pub fn alive(name: String) -> String {
     if let Some(temp) = OWNER_FTP_STREAM.lock().unwrap().get_mut(&name) {
         if let Some(_) = temp {
-            return serde_json::to_string(&Success::new(
-                CONNECTED_SUCCESS_CODE,
-                String::from("连接中"),
-                (),
-            ))
-            .unwrap();
+            return Success::new(CONNECTED_SUCCESS_CODE, "连接中", ()).out();
         }
     }
-    serde_json::to_string(&Error::new(
-        DISCONNECTED_ERROR_CODE,
-        CustomError::GetFtpstreamError.to_string(),
-    ))
-    .unwrap()
+    Error::new(DISCONNECTED_ERROR_CODE, CustomError::GetFtpstreamError).out()
 }
 
 #[tauri::command]
@@ -95,25 +86,11 @@ pub fn connect(addr: String, user: String, pass: String) -> String {
                     .lock()
                     .unwrap()
                     .insert(snow_id.clone(), Some(ftp_stream));
-                return serde_json::to_string(&Success::new(
-                    CONNECTED_SUCCESS_CODE,
-                    String::from("连接成功！"),
-                    snow_id.clone(),
-                ))
-                .unwrap();
+                return Success::new(CONNECTED_SUCCESS_CODE, "连接成功！", snow_id.clone()).out();
             }
-            Err(err) => {
-                return serde_json::to_string(&Error::new(
-                    DISCONNECTED_ERROR_CODE,
-                    err.to_string(),
-                ))
-                .unwrap();
-            }
+            Err(err) => return Error::new(DISCONNECTED_ERROR_CODE, err).out(),
         },
-        Err(err) => {
-            return serde_json::to_string(&Error::new(DISCONNECTED_ERROR_CODE, err.to_string()))
-                .unwrap();
-        }
+        Err(err) => return Error::new(DISCONNECTED_ERROR_CODE, err).out(),
     }
 }
 
@@ -135,24 +112,16 @@ pub fn pwd(name: String) -> String {
                 if let Some(ftp_stream) = temp {
                     match ftp_stream.pwd() {
                         Ok(root) => {
-                            return serde_json::to_string(&Success::new(
-                                200,
-                                String::from("获取成功！"),
-                                root,
-                            ))
-                            .unwrap();
+                            return Success::new(200, "获取成功！", root).out();
                         }
-                        Err(err) => {
-                            return serde_json::to_string(&Error::new(400, err.to_string()))
-                                .unwrap()
-                        }
+                        Err(err) => return Error::new(502, err).out(),
                     }
                 }
             }
         }
-        Err(err) => return serde_json::to_string(&Error::new(400, err.to_string())).unwrap(),
+        Err(err) => return Error::new(502, err).out(),
     }
-    serde_json::to_string(&Error::new(400, String::from("获取失败！"))).unwrap()
+    return Error::new(502, "获取失败！").out();
 }
 
 #[tauri::command]
@@ -163,24 +132,16 @@ pub fn prev(name: String) -> String {
                 if let Some(ftp_stream) = temp {
                     match ftp_stream.cdup() {
                         Ok(_) => {
-                            return serde_json::to_string(&Success::new(
-                                200,
-                                String::from("更改文件夹成功！"),
-                                String::from(""),
-                            ))
-                            .unwrap();
+                            return Success::new(200, "更改文件夹成功！", ()).out();
                         }
-                        Err(err) => {
-                            return serde_json::to_string(&Error::new(400, err.to_string()))
-                                .unwrap()
-                        }
+                        Err(err) => return Error::new(502, err).out(),
                     }
                 }
             }
         }
-        Err(err) => return serde_json::to_string(&Error::new(400, err.to_string())).unwrap(),
+        Err(err) => return Error::new(502, err).out(),
     }
-    return serde_json::to_string(&Error::new(400, String::from("更改文件夹失败！"))).unwrap();
+    return Error::new(502, "更改文件夹失败！").out();
 }
 
 #[tauri::command]
@@ -191,24 +152,16 @@ pub fn cwd(name: String, path: String) -> String {
                 if let Some(ftp_stream) = temp {
                     match ftp_stream.cwd(&path) {
                         Ok(_) => {
-                            return serde_json::to_string(&Success::new(
-                                200,
-                                String::from("更改文件夹成功！"),
-                                String::from(""),
-                            ))
-                            .unwrap();
+                            return Success::new(200, "更改文件夹成功！", ()).out();
                         }
-                        Err(err) => {
-                            return serde_json::to_string(&Error::new(400, err.to_string()))
-                                .unwrap()
-                        }
+                        Err(err) => return Error::new(502, err).out(),
                     }
                 }
             }
         }
-        Err(err) => return serde_json::to_string(&Error::new(400, err.to_string())).unwrap(),
+        Err(err) => return Error::new(502, err).out(),
     }
-    return serde_json::to_string(&Error::new(400, String::from("更改文件夹失败！"))).unwrap();
+    return Error::new(502, "更改文件夹失败！").out();
 }
 
 #[tauri::command]
@@ -290,26 +243,20 @@ pub fn list(name: String) -> String {
                                     name: name,
                                 });
                             }
-                            return serde_json::to_string(&Success::new(
-                                200,
-                                String::from("获取成功！"),
-                                file_list,
-                            ))
-                            .unwrap();
+                            return Success::new(200, "获取成功！", file_list).out();
                         }
                         Err(err) => {
-                            return serde_json::to_string(&Error::new(400, err.to_string()))
-                                .unwrap();
+                            return Error::new(502, err).out();
                         }
                     }
                 }
             }
         }
         Err(err) => {
-            return serde_json::to_string(&Error::new(400, err.to_string())).unwrap();
+            return Error::new(502, err).out();
         }
     }
-    return serde_json::to_string(&Error::new(400, String::from("获取失败！"))).unwrap();
+    return Error::new(502, "获取失败！").out();
 }
 
 #[tauri::command]
@@ -343,26 +290,20 @@ pub fn folder_list(name: String) -> String {
                                 num += 1;
                             }
                             folder_tree.children = Some(folder_leaf);
-                            return serde_json::to_string(&Success::new(
-                                200,
-                                String::from("获取成功！"),
-                                folder_tree,
-                            ))
-                            .unwrap();
+                            return Success::new(200, "获取成功！", folder_tree).out();
                         }
                         Err(err) => {
-                            return serde_json::to_string(&Error::new(400, err.to_string()))
-                                .unwrap();
+                            return Error::new(502, err).out();
                         }
                     }
                 }
             }
         }
         Err(err) => {
-            return serde_json::to_string(&Error::new(400, err.to_string())).unwrap();
+            return Error::new(502, err).out();
         }
     }
-    return serde_json::to_string(&Error::new(400, String::from("获取失败！"))).unwrap();
+    return Error::new(502, "获取失败！").out();
 }
 
 #[tauri::command]
@@ -373,26 +314,20 @@ pub fn rename_file(name: String, from_name: String, to_name: String) -> String {
                 if let Some(ftp_stream) = temp {
                     match ftp_stream.rename(&from_name, &to_name) {
                         Ok(_) => {
-                            return serde_json::to_string(&Success::new(
-                                200,
-                                String::from("更改文件夹名称成功！"),
-                                "",
-                            ))
-                            .unwrap();
+                            return Success::new(200, "更改文件夹名称成功！", "").out();
                         }
                         Err(err) => {
-                            return serde_json::to_string(&Error::new(400, err.to_string()))
-                                .unwrap();
+                            return Error::new(502, err).out();
                         }
                     }
                 }
             }
         }
         Err(err) => {
-            return serde_json::to_string(&Error::new(400, err.to_string())).unwrap();
+            return Error::new(502, err).out();
         }
     }
-    return serde_json::to_string(&Error::new(400, String::from("更改文件夹名称失败！"))).unwrap();
+    return Error::new(502, "更改文件夹名称失败！").out();
 }
 
 #[tauri::command]
@@ -403,26 +338,20 @@ pub fn remove_file(name: String, filename: String) -> String {
                 if let Some(ftp_stream) = temp {
                     match ftp_stream.rm(&filename) {
                         Ok(_) => {
-                            return serde_json::to_string(&Success::new(
-                                200,
-                                String::from("删除文件成功！"),
-                                (),
-                            ))
-                            .unwrap();
+                            return Success::new(200, "删除文件成功！", ()).out();
                         }
                         Err(err) => {
-                            return serde_json::to_string(&Error::new(502, err.to_string()))
-                                .unwrap();
+                            return Error::new(502, err).out();
                         }
                     }
                 }
             }
         }
         Err(err) => {
-            return serde_json::to_string(&Error::new(502, err.to_string())).unwrap();
+            return Error::new(502, err).out();
         }
     }
-    return serde_json::to_string(&Error::new(502, String::from("删除文件失败！"))).unwrap();
+    return Error::new(502, "删除文件失败！").out();
 }
 
 #[tauri::command]
@@ -433,26 +362,25 @@ pub fn remove_dir(name: String, path: String) -> String {
                 if let Some(ftp_stream) = temp {
                     match ftp_stream.rmdir(&path) {
                         Ok(_) => {
-                            return serde_json::to_string(&Success::new(
+                            return Success::new(
                                 200,
-                                String::from("删除文件夹".to_string() + &path + "成功！"),
+                                String::from("删除文件夹") + &path + "成功！",
                                 (),
-                            ))
-                            .unwrap();
+                            )
+                            .out();
                         }
                         Err(err) => {
-                            return serde_json::to_string(&Error::new(502, err.to_string()))
-                                .unwrap();
+                            return Error::new(502, err).out();
                         }
                     }
                 }
             }
         }
         Err(err) => {
-            return serde_json::to_string(&Error::new(502, err.to_string())).unwrap();
+            return Error::new(502, err).out();
         }
     }
-    return serde_json::to_string(&Error::new(502, String::from("删除文件夹失败！"))).unwrap();
+    return Error::new(502, "删除文件夹失败！").out();
 }
 
 #[tauri::command]
@@ -463,26 +391,25 @@ pub fn mk_dir(name: String, path: String) -> String {
                 if let Some(ftp_stream) = temp {
                     match ftp_stream.mkdir(&path) {
                         Ok(_) => {
-                            return serde_json::to_string(&Success::new(
+                            return Success::new(
                                 200,
-                                String::from("创建文件夹".to_string() + &path + "成功！"),
+                                String::from("创建文件夹") + &path + "成功！",
                                 (),
-                            ))
-                            .unwrap();
+                            )
+                            .out();
                         }
                         Err(err) => {
-                            return serde_json::to_string(&Error::new(502, err.to_string()))
-                                .unwrap();
+                            return Error::new(502, err).out();
                         }
                     }
                 }
             }
         }
         Err(err) => {
-            return serde_json::to_string(&Error::new(502, err.to_string())).unwrap();
+            return Error::new(502, err).out();
         }
     }
-    return serde_json::to_string(&Error::new(502, String::from("创建文件夹失败！"))).unwrap();
+    return Error::new(502, "创建文件夹失败！").out();
 }
 
 #[tauri::command]
@@ -494,26 +421,25 @@ pub fn mk_file(name: String, filename: String) -> String {
                     let mut b = "".as_bytes();
                     match ftp_stream.put(&filename, &mut b) {
                         Ok(_) => {
-                            return serde_json::to_string(&Success::new(
+                            return Success::new(
                                 200,
-                                String::from("创建文件".to_string() + &filename + "成功！"),
+                                String::from("创建文件") + &filename + "成功！",
                                 (),
-                            ))
-                            .unwrap();
+                            )
+                            .out();
                         }
                         Err(err) => {
-                            return serde_json::to_string(&Error::new(502, err.to_string()))
-                                .unwrap();
+                            return Error::new(502, err).out();
                         }
                     }
                 }
             }
         }
         Err(err) => {
-            return serde_json::to_string(&Error::new(502, err.to_string())).unwrap();
+            return Error::new(502, err).out();
         }
     }
-    return serde_json::to_string(&Error::new(502, String::from("创建文件失败！"))).unwrap();
+    return Error::new(502, "创建文件失败！").out();
 }
 
 #[tauri::command]
@@ -528,35 +454,30 @@ pub fn upload(name: String, filename: String, content: String) -> String {
                             let mut b = temp.as_slice();
                             match ftp_stream.put(&filename, &mut b) {
                                 Ok(_) => {
-                                    return serde_json::to_string(&Success::new(
+                                    return Success::new(
                                         200,
-                                        String::from("上传文件".to_string() + &filename + "成功！"),
+                                        String::from("上传文件") + &filename + "成功！",
                                         (),
-                                    ))
-                                    .unwrap();
+                                    )
+                                    .out();
                                 }
                                 Err(err) => {
-                                    return serde_json::to_string(&Error::new(
-                                        502,
-                                        err.to_string(),
-                                    ))
-                                    .unwrap();
+                                    return Error::new(502, err).out();
                                 }
                             }
                         }
                         Err(err) => {
-                            return serde_json::to_string(&Error::new(502, err.to_string()))
-                                .unwrap();
+                            return Error::new(502, err).out();
                         }
                     }
                 }
             }
         }
         Err(err) => {
-            return serde_json::to_string(&Error::new(502, err.to_string())).unwrap();
+            return Error::new(502, err).out();
         }
     }
-    return serde_json::to_string(&Error::new(502, String::from("上传文件失败！"))).unwrap();
+    return Error::new(502, "上传文件失败！").out();
 }
 
 #[tauri::command]
@@ -566,20 +487,15 @@ pub fn quit(name: String) -> String {
             if let Some(temp) = s.get_mut(&name) {
                 if let Some(ftp_stream) = temp {
                     let _ = ftp_stream.quit();
-                    return serde_json::to_string(&Success::new(
-                        200,
-                        String::from("已断开连接"),
-                        (),
-                    ))
-                    .unwrap();
+                    return Success::new(200, "已断开连接", ()).out();
                 }
             }
         }
         Err(err) => {
-            return serde_json::to_string(&Error::new(502, err.to_string())).unwrap();
+            return Error::new(502, err).out();
         }
     }
-    return serde_json::to_string(&Error::new(502, String::from("出现异常"))).unwrap();
+    return Error::new(502, "出现异常").out();
 }
 
 #[tauri::command]
@@ -602,13 +518,7 @@ pub fn size_sort(mut file_list: Option<Vec<FileList>>, sort_way: bool) -> String
             len -= 1;
             list.swap(pos_max, len);
         }
-        return serde_json::to_string(&Success::new(
-            200,
-            String::from("排序成功！"),
-            list.to_vec(),
-        ))
-        .unwrap();
+        return Success::new(200, "排序成功！", list.to_vec()).out();
     }
-    return serde_json::to_string(&Success::new(200, String::from("排序成功！"), vec![""]))
-        .unwrap();
+    return Success::new(200, "排序成功！", vec![""]).out();
 }

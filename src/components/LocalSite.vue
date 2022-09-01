@@ -10,6 +10,7 @@
       <div>
         <a-input :value="currentPath" addon-before="本地站点：" />
         <a-tree
+          v-if="treeData.length > 0"
           style="
             overflow-y: auto;
             max-height: 100px !important;
@@ -18,7 +19,7 @@
           :show-icon="true"
           :tree-data="treeData"
           @select="changeLocal"
-          :defaultExpandAll="true"
+          :default-expanded-keys="['0']"
         >
           <template #title="dataRef">
             {{ dataRef.title }}
@@ -411,7 +412,7 @@ export default {
           document
             .querySelectorAll("tr")
             .forEach((elem) => elem.classList.remove("selected"));
-          event.target.parentElement.className = "selected";
+          event.target.parentNode.classList.add("selected");
           for (const key in this.dataSource) {
             this.dataSource[key].name.showInput = false;
           }
@@ -440,6 +441,9 @@ export default {
     },
     handleFocus(event) {
       event.target.select();
+    },
+    getCurrentPath() {
+      return this.currentPath;
     },
     getTreeData() {
       let dir = ["C:/", "D:/", "E:/", "F:/"];

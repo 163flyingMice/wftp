@@ -21,8 +21,8 @@ use remote::{
 use tauri::generate_context;
 
 use crate::sftp::{
-    readdir, sftp_connect, sftp_create, sftp_cwd, sftp_folder_list, sftp_mkdir, sftp_prev,
-    sftp_pwd, sftp_rename, sftp_rmdir, sftp_unlink, sftp_upload,
+    readdir, sftp_connect, sftp_create, sftp_cwd, sftp_download, sftp_folder_list, sftp_mkdir,
+    sftp_prev, sftp_pwd, sftp_rename, sftp_rmdir, sftp_unlink, sftp_upload,
 };
 
 fn main() {
@@ -61,6 +61,7 @@ fn main() {
             sftp_rmdir,
             sftp_unlink,
             sftp_upload,
+            sftp_download,
         ])
         .menu(menu::init())
         .on_menu_event(menu::handler)

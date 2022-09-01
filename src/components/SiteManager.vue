@@ -11,10 +11,12 @@
       <a-layout-sider theme="light" width="350px" style="margin-right: 6px">
         <a-row style="height: 300px">
           <a-tree
+            v-if="treeData.length > 0"
             :tree-data="treeData"
             :show-icon="true"
             @select="selectLeaf"
             :defaultExpandAll="true"
+            ref="tree"
           >
             <template #title="dataRef">
               <template v-if="!dataRef.editable && !dataRef.writable">
@@ -235,6 +237,7 @@ import store from "@/store/index";
 import { invoke } from "@tauri-apps/api";
 import { PlusSquareOutlined } from "@ant-design/icons-vue";
 import { Modal } from "ant-design-vue";
+import { getProtocol } from "../apis/index";
 
 export default {
   props: {
@@ -245,6 +248,7 @@ export default {
   },
   mounted() {
     this.getWftpServer();
+    this.addCurrentToSite();
   },
   methods: {
     selectLeaf(key, elem) {
@@ -278,6 +282,27 @@ export default {
       this.selected.Name = this.title;
       this.selected.editable = false;
       this.selected.writable = false;
+    },
+    addCurrentToSite() {
+      if (store.state.addCurrentToSite) {
+        if (store.state.panes.length != 0) {
+          let connected = getProtocol();
+          this.title = connected.data.Name;
+          this.treeData[0].children.push({
+            key: "0-" + this.treeData[0].children.length,
+            Name: connected.data.Name,
+            editable: false,
+            writable: true,
+            Host: connected.data.Host,
+            LogonType: connected.data.LogonType,
+            Pass: connected.data.Pass,
+            Port: connected.data.Port,
+            Protocol: connected.data.Protocol,
+            User: connected.data.User,
+          });
+        }
+        store.state.addCurrentToSite = false;
+      }
     },
     saveXml() {
       invoke("wftp_xml_string", {

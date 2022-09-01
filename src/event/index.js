@@ -1,4 +1,5 @@
 import store from '@/store';
+import { invoke } from '@tauri-apps/api';
 import {
     listen
 } from '@tauri-apps/api/event';
@@ -14,7 +15,28 @@ export function definedListeningEvent() {
         store.state.addLableVisible = true;
     });
     listen('label_manager', () => {
-        console.log(1)
         store.state.labelManagerVisible = true;
     });
+    listen('add_current_to_site', () => {
+        store.state.addCurrentToSite = true;
+        store.state.modalVisible = true;
+    });
+    listen('erase_personal_information', () => {
+        localStorage.clear();
+        invoke("get_default_wftp", {}).then((response) => {
+            let res = JSON.parse(response);
+            if (res.code == 200) {
+                localStorage.setItem("wftp_server", res.list);
+                invoke("get_wftp_server", { wftpXml: res.list }).then(
+                    (response) => {
+                        let res = JSON.parse(response);
+                        if (res.code == 200) {
+                            store.state.wftpServer = res.list;
+                        }
+                    }
+                );
+            }
+        });
+    });
+
 }

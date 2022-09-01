@@ -7,6 +7,7 @@ pub const GET_FTPSTREAM_ERROR_CODE: usize = 501;
 pub const GET_FILE_ERROR_CODE: usize = 404;
 pub const DISCONNECTED_ERROR_CODE: usize = 502;
 pub const CONNECTED_SUCCESS_CODE: usize = 200;
+pub const UNAUTHORIZED_CODE: usize = 401;
 
 #[derive(Serialize, Debug, Deserialize)]
 pub enum CustomError {

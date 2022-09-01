@@ -1,13 +1,15 @@
 use base64_stream::base64::decode;
 use ssh2::{FileStat, Session, Sftp};
 use std::collections::HashMap;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::path::Path;
 use std::sync::Mutex;
 
 use crate::remote::{FileList, FolderLeaf, FolderTree};
-use crate::result::{Error, Success, CONNECTED_SUCCESS_CODE, DISCONNECTED_ERROR_CODE};
+use crate::result::{
+    Error, Success, CONNECTED_SUCCESS_CODE, DISCONNECTED_ERROR_CODE, UNAUTHORIZED_CODE,
+};
 use crate::util::{get_format_perm, get_format_time, get_snow_id};
 
 pub struct SftpStruct {
@@ -40,41 +42,26 @@ pub fn sftp_connect(addr: String, user: String, pass: String) -> String {
                                 match SFTP_VEC.lock() {
                                     Ok(mut t) => {
                                         t.insert(snow_id.clone(), Some(sftp_struct));
-                                        serde_json::to_string(&Success::new(
+                                        Success::new(
                                             CONNECTED_SUCCESS_CODE,
-                                            String::from("连接成功！"),
+                                            "连接成功！",
                                             snow_id.clone(),
-                                        ))
-                                        .unwrap()
+                                        )
+                                        .out()
                                     }
-                                    Err(err) => serde_json::to_string(&Error::new(
-                                        DISCONNECTED_ERROR_CODE,
-                                        err.to_string(),
-                                    ))
-                                    .unwrap(),
+                                    Err(err) => Error::new(DISCONNECTED_ERROR_CODE, err).out(),
                                 }
                             }
-                            Err(err) => serde_json::to_string(&Error::new(
-                                DISCONNECTED_ERROR_CODE,
-                                err.to_string(),
-                            ))
-                            .unwrap(),
+                            Err(err) => Error::new(DISCONNECTED_ERROR_CODE, err).out(),
                         },
-                        Err(err) => serde_json::to_string(&Error::new(
-                            DISCONNECTED_ERROR_CODE,
-                            err.to_string(),
-                        ))
-                        .unwrap(),
+                        Err(err) => Error::new(DISCONNECTED_ERROR_CODE, err).out(),
                     },
-                    Err(err) => {
-                        serde_json::to_string(&Error::new(DISCONNECTED_ERROR_CODE, err.to_string()))
-                            .unwrap()
-                    }
+                    Err(err) => Error::new(DISCONNECTED_ERROR_CODE, err).out(),
                 }
             }
-            Err(err) => serde_json::to_string(&Error::new(400, err.to_string())).unwrap(),
+            Err(err) => Error::new(400, err).out(),
         },
-        Err(err) => serde_json::to_string(&Error::new(400, err.to_string())).unwrap(),
+        Err(err) => Error::new(400, err).out(),
     }
 }
 
@@ -101,30 +88,40 @@ pub fn readdir(name: String) -> String {
                                     if let Some(temp) = file_stat.size {
                                         size = temp as usize;
                                     }
-                                    let is_directory: String;
+                                    let mut is_directory: String;
                                     let mut perm: String = String::from("");
+                                    let mut path = String::new();
                                     if file_stat.is_dir() {
                                         size = 0;
                                         perm += "d";
                                         is_directory = String::from("文件夹");
                                         name.insert(String::from("kind"), String::from("folder"));
                                     } else {
-                                        is_directory = String::from("文件");
-                                        let mut temp: String = String::from("不知命文件");
-                                        if let Some(ext) = elem.0.clone().extension() {
-                                            if let Some(extention) = ext.to_str() {
-                                                temp = extention.to_string() + " 文件";
+                                        is_directory = String::from("链接");
+                                        if file_stat.file_type().is_symlink() {
+                                            name.insert(
+                                                String::from("kind"),
+                                                String::from("folder"),
+                                            );
+                                            if let Ok(t) = sftp.readlink(elem.0.as_path()) {
+                                                path = t.to_str().unwrap().to_string();
                                             }
                                         } else {
-                                            temp = title.clone() + "文件";
+                                            is_directory = String::from("文件");
+                                            let mut temp: String = String::from("不知名文件");
+                                            if let Some(ext) = elem.0.clone().extension() {
+                                                if let Some(extention) = ext.to_str() {
+                                                    temp = extention.to_string() + " 文件";
+                                                }
+                                            } else {
+                                                temp = title.clone() + "文件";
+                                            }
+                                            name.insert(String::from("kind"), temp);
                                         }
-                                        name.insert(String::from("kind"), temp);
                                     }
-                                    let mut path = String::from("/");
                                     if let Some(temp) = elem.0.to_str() {
-                                        path = temp.to_string();
                                         if title == "" {
-                                            title = String::from("未知文件命");
+                                            title = String::from("未知文件名");
                                             let temp_name = temp
                                                 .split("\\")
                                                 .map(|s| s.to_string())
@@ -172,6 +169,8 @@ pub fn readdir(name: String) -> String {
                         }
                     }
                 }
+            } else {
+                return Error::new(UNAUTHORIZED_CODE, "用户身份未验证").out();
             }
         }
         Err(err) => {
@@ -195,16 +194,10 @@ pub fn sftp_rmdir(name: String, mut path: String) -> String {
                         }
                         match sftp.rmdir(Path::new(&path)) {
                             Ok(_) => {
-                                return serde_json::to_string(&Success::new(
-                                    200,
-                                    String::from("删除文件夹成功！"),
-                                    (),
-                                ))
-                                .unwrap();
+                                return Success::new(200, "删除文件夹成功！", ()).out();
                             }
                             Err(err) => {
-                                return serde_json::to_string(&Error::new(400, err.to_string()))
-                                    .unwrap();
+                                return Error::new(400, err).out();
                             }
                         }
                     }
@@ -212,10 +205,10 @@ pub fn sftp_rmdir(name: String, mut path: String) -> String {
             }
         }
         Err(err) => {
-            return serde_json::to_string(&Error::new(400, err.to_string())).unwrap();
+            return Error::new(400, err).out();
         }
     }
-    return serde_json::to_string(&Error::new(502, String::from("删除文件夹失败！"))).unwrap();
+    return Error::new(502, "删除文件夹失败！").out();
 }
 
 #[tauri::command]
@@ -233,16 +226,10 @@ pub fn sftp_unlink(name: String, mut filename: String) -> String {
                         }
                         match sftp.unlink(Path::new(&filename)) {
                             Ok(_) => {
-                                return serde_json::to_string(&Success::new(
-                                    200,
-                                    String::from("删除文件成功！"),
-                                    (),
-                                ))
-                                .unwrap();
+                                return Success::new(200, "删除文件成功！", ()).out();
                             }
                             Err(err) => {
-                                return serde_json::to_string(&Error::new(400, err.to_string()))
-                                    .unwrap();
+                                return Error::new(400, err).out();
                             }
                         }
                     }
@@ -250,10 +237,10 @@ pub fn sftp_unlink(name: String, mut filename: String) -> String {
             }
         }
         Err(err) => {
-            return serde_json::to_string(&Error::new(400, err.to_string())).unwrap();
+            return Error::new(400, err).out();
         }
     }
-    return serde_json::to_string(&Error::new(502, String::from("删除文件失败！"))).unwrap();
+    return Error::new(502, "删除文件失败！").out();
 }
 
 #[tauri::command]
@@ -265,20 +252,10 @@ pub fn sftp_create(name: String, filename: String) -> String {
                     if let Some(sftp) = sftp_temp.sftp.as_mut() {
                         match sftp.create(Path::new(&filename)) {
                             Ok(_) => {
-                                return serde_json::to_string(&Success::new(
-                                    200,
-                                    String::from("创建文件成功！"),
-                                    (),
-                                ))
-                                .unwrap();
+                                return Success::new(200, "创建文件成功！", ()).out();
                             }
                             Err(err) => {
-                                return serde_json::to_string(&Success::new(
-                                    400,
-                                    err.to_string(),
-                                    (),
-                                ))
-                                .unwrap();
+                                return Error::new(400, err).out();
                             }
                         }
                     }
@@ -286,10 +263,10 @@ pub fn sftp_create(name: String, filename: String) -> String {
             }
         }
         Err(err) => {
-            return serde_json::to_string(&Error::new(400, err.to_string())).unwrap();
+            return Error::new(400, err).out();
         }
     }
-    return serde_json::to_string(&Error::new(502, String::from("创建文件失败！"))).unwrap();
+    return Error::new(502, "创建文件失败！").out();
 }
 
 #[tauri::command]
@@ -301,16 +278,10 @@ pub fn sftp_mkdir(name: String, path: String) -> String {
                     if let Some(sftp) = sftp_temp.sftp.as_mut() {
                         match sftp.mkdir(Path::new(&path), 0600) {
                             Ok(_) => {
-                                return serde_json::to_string(&Success::new(
-                                    200,
-                                    String::from("创建文件夹成功！"),
-                                    (),
-                                ))
-                                .unwrap();
+                                return Success::new(200, "创建文件夹成功！", ()).out();
                             }
                             Err(err) => {
-                                return serde_json::to_string(&Error::new(400, err.to_string()))
-                                    .unwrap();
+                                return Error::new(400, err).out();
                             }
                         }
                     }
@@ -318,10 +289,10 @@ pub fn sftp_mkdir(name: String, path: String) -> String {
             }
         }
         Err(err) => {
-            return serde_json::to_string(&Error::new(400, err.to_string())).unwrap();
+            return Error::new(400, err).out();
         }
     }
-    return serde_json::to_string(&Error::new(502, String::from("创建文件夹失败！"))).unwrap();
+    return Error::new(502, "创建文件夹失败！").out();
 }
 
 #[tauri::command]
@@ -341,16 +312,10 @@ pub fn sftp_rename(name: String, mut from_name: String, mut to_name: String) -> 
                         }
                         match sftp.rename(Path::new(&from_name), Path::new(&to_name), None) {
                             Ok(_) => {
-                                return serde_json::to_string(&Success::new(
-                                    200,
-                                    String::from("重命名成功！"),
-                                    (),
-                                ))
-                                .unwrap();
+                                return Success::new(200, "重命名成功！", ()).out();
                             }
                             Err(err) => {
-                                return serde_json::to_string(&Error::new(400, err.to_string()))
-                                    .unwrap();
+                                return Error::new(400, err).out();
                             }
                         }
                     }
@@ -358,10 +323,10 @@ pub fn sftp_rename(name: String, mut from_name: String, mut to_name: String) -> 
             }
         }
         Err(err) => {
-            return serde_json::to_string(&Error::new(400, err.to_string())).unwrap();
+            return Error::new(400, err).out();
         }
     }
-    return serde_json::to_string(&Error::new(502, String::from("重命名失败！"))).unwrap();
+    return Error::new(502, "重命名失败！").out();
 }
 
 #[tauri::command]
@@ -383,20 +348,10 @@ pub fn sftp_set_stat(name: String, filename: String) -> String {
                             },
                         ) {
                             Ok(_) => {
-                                return serde_json::to_string(&Success::new(
-                                    200,
-                                    String::from("修改文件属性成功！"),
-                                    (),
-                                ))
-                                .unwrap();
+                                return Success::new(200, "修改文件属性成功！", ()).out();
                             }
                             Err(err) => {
-                                return serde_json::to_string(&Success::new(
-                                    400,
-                                    err.to_string(),
-                                    (),
-                                ))
-                                .unwrap();
+                                return Error::new(400, err).out();
                             }
                         }
                     }
@@ -404,10 +359,10 @@ pub fn sftp_set_stat(name: String, filename: String) -> String {
             }
         }
         Err(err) => {
-            return serde_json::to_string(&Success::new(400, err.to_string(), ())).unwrap();
+            return Error::new(400, err).out();
         }
     }
-    return serde_json::to_string(&Error::new(502, String::from("修改文件属性失败！"))).unwrap();
+    return Error::new(400, "修改文件属性失败！").out();
 }
 
 #[tauri::command]
@@ -451,20 +406,10 @@ pub fn sftp_folder_list(name: String) -> String {
                                     num += 1;
                                 }
                                 folder_tree.children = Some(folder_leaf);
-                                return serde_json::to_string(&Success::new(
-                                    200,
-                                    String::from("获取成功！"),
-                                    folder_tree,
-                                ))
-                                .unwrap();
+                                return Success::new(200, "获取成功！", folder_tree).out();
                             }
                             Err(err) => {
-                                return serde_json::to_string(&Success::new(
-                                    400,
-                                    err.to_string(),
-                                    (),
-                                ))
-                                .unwrap();
+                                return Error::new(400, err).out();
                             }
                         }
                     }
@@ -472,10 +417,10 @@ pub fn sftp_folder_list(name: String) -> String {
             }
         }
         Err(err) => {
-            return serde_json::to_string(&Success::new(400, err.to_string(), ())).unwrap();
+            return Error::new(400, err).out();
         }
     }
-    return serde_json::to_string(&Error::new(400, String::from("获取失败！"))).unwrap();
+    return Error::new(400, "获取失败！").out();
 }
 
 #[tauri::command]
@@ -492,21 +437,16 @@ pub fn sftp_cwd(name: String, path: String) -> String {
                             sftp_temp.current_path =
                                 sftp_temp.current_path.as_mut().to_string() + &path;
                         }
-                        return serde_json::to_string(&Success::new(
-                            200,
-                            String::from("更改文件夹成功！"),
-                            String::from(""),
-                        ))
-                        .unwrap();
+                        return Success::new(200, "更改文件夹成功！", ()).out();
                     }
                 }
             }
         }
         Err(err) => {
-            return serde_json::to_string(&Success::new(400, err.to_string(), ())).unwrap();
+            return Error::new(400, err).out();
         }
     }
-    return serde_json::to_string(&Error::new(400, String::from("更改文件夹失败！"))).unwrap();
+    return Error::new(400, "更改文件夹失败！").out();
 }
 
 #[tauri::command]
@@ -525,21 +465,16 @@ pub fn sftp_prev(name: String) -> String {
                             }
                             sftp_temp.current_path = path;
                         }
-                        return serde_json::to_string(&Success::new(
-                            200,
-                            String::from("更改文件夹成功！"),
-                            String::from(""),
-                        ))
-                        .unwrap();
+                        return Success::new(200, "更改文件夹成功！", ()).out();
                     }
                 }
             }
         }
         Err(err) => {
-            return serde_json::to_string(&Success::new(400, err.to_string(), ())).unwrap();
+            return Error::new(400, err).out();
         }
     }
-    return serde_json::to_string(&Error::new(400, String::from("更改文件夹失败！"))).unwrap();
+    return Error::new(400, "更改文件夹失败！").out();
 }
 
 #[tauri::command]
@@ -549,12 +484,8 @@ pub fn sftp_pwd(name: String) -> String {
             if let Some(temp) = s.get_mut(&name) {
                 if let Some(sftp_temp) = temp {
                     if let Some(_) = sftp_temp.sftp.as_mut() {
-                        return serde_json::to_string(&Success::new(
-                            200,
-                            String::from("获取成功！"),
-                            sftp_temp.current_path.clone(),
-                        ))
-                        .unwrap();
+                        return Success::new(200, "获取成功！", sftp_temp.current_path.clone())
+                            .out();
                     }
                 }
             }
@@ -585,37 +516,26 @@ pub fn sftp_upload(name: String, mut filename: String, content: String) -> Strin
                                     match file.write(b) {
                                         Ok(_) => {
                                             let _ = file.flush();
-                                            return serde_json::to_string(&Success::new(
+                                            return Success::new(
                                                 200,
-                                                String::from(
-                                                    "上传文件".to_string() + &filename + "成功！",
-                                                ),
+                                                String::from("上传文件") + &filename + "成功！",
                                                 (),
-                                            ))
-                                            .unwrap();
+                                            )
+                                            .out();
                                         }
                                         Err(err) => {
                                             let _ = sftp.unlink(Path::new(&filename));
-                                            return serde_json::to_string(&Error::new(
-                                                400,
-                                                err.to_string(),
-                                            ))
-                                            .unwrap();
+                                            return Error::new(400, err).out();
                                         }
                                     };
                                 }
                                 Err(err) => {
-                                    return serde_json::to_string(&Error::new(
-                                        400,
-                                        err.to_string(),
-                                    ))
-                                    .unwrap();
+                                    return Error::new(400, err).out();
                                 }
                             },
                             Err(err) => {
                                 let _ = sftp.unlink(Path::new(&filename));
-                                return serde_json::to_string(&Error::new(400, err.to_string()))
-                                    .unwrap();
+                                return Error::new(400, err).out();
                             }
                         }
                     }
@@ -623,8 +543,41 @@ pub fn sftp_upload(name: String, mut filename: String, content: String) -> Strin
             }
         }
         Err(err) => {
-            return serde_json::to_string(&Error::new(502, err.to_string())).unwrap();
+            return Error::new(400, err).out();
         }
     }
-    return serde_json::to_string(&Error::new(502, String::from("上传文件失败！"))).unwrap();
+    return Error::new(502, "上传文件失败！").out();
+}
+
+#[tauri::command]
+pub fn sftp_download(name: String, mut filename: String) -> String {
+    match SFTP_VEC.lock() {
+        Ok(mut s) => {
+            if let Some(temp) = s.get_mut(&name) {
+                if let Some(sftp_temp) = temp {
+                    if let Some(sftp) = sftp_temp.sftp.as_mut() {
+                        if sftp_temp.current_path != "/" {
+                            filename = sftp_temp.current_path.to_string() + "/" + &filename;
+                        } else {
+                            filename = sftp_temp.current_path.to_string() + &filename;
+                        }
+                        match sftp.open(Path::new(&filename)) {
+                            Ok(mut file) => {
+                                let mut buf: Vec<u8> = Vec::new();
+                                match file.read_to_end(&mut buf) {
+                                    Ok(_) => {
+                                        return Success::new(200, "下载成功！", buf).out();
+                                    }
+                                    Err(err) => return Error::new(401, err).out(),
+                                }
+                            }
+                            Err(err) => return Error::new(402, err).out(),
+                        }
+                    }
+                }
+            }
+        }
+        Err(err) => return Error::new(403, err).out(),
+    }
+    return Error::new(502, "下载文件失败！").out();
 }

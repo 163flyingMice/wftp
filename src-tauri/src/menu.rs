@@ -12,7 +12,7 @@ pub fn init() -> Menu {
                 "站点管理器",
             ))
             .add_item(CustomMenuItem::new(
-                "new_file".to_string(),
+                "add_current_to_site".to_string(),
                 "添加当前连接到站点管理器",
             ))
             .add_item(CustomMenuItem::new("edit_file".to_string(), "新标签"))
@@ -29,7 +29,10 @@ pub fn init() -> Menu {
         "编辑",
         Menu::new()
             .add_item(CustomMenuItem::new("undo".to_string(), "网络配置向导"))
-            .add_item(CustomMenuItem::new("redo".to_string(), "清除个人信息"))
+            .add_item(CustomMenuItem::new(
+                "erase_personal_information".to_string(),
+                "清除个人信息",
+            ))
             .add_item(CustomMenuItem::new("redo".to_string(), "设置")),
     );
     let view_menu = Submenu::new(
@@ -98,12 +101,21 @@ pub fn handler(event: WindowMenuEvent) {
         "label_manager" => {
             let _ = win.unwrap().emit("label_manager", "标签管理").unwrap();
         }
+        "add_current_to_site" => {
+            let _ = win
+                .unwrap()
+                .emit("add_current_to_site", "添加当前连接到站点管理器")
+                .unwrap();
+        }
+        "erase_personal_information" => {
+            let _ = win
+                .unwrap()
+                .emit("erase_personal_information", "清除个人信息")
+                .unwrap();
+        }
         "edit_file" => {}
         "undo" => {
             dbg!("undo");
-        }
-        "redo" => {
-            dbg!("redo");
         }
         _ => {}
     }

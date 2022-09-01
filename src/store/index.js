@@ -51,6 +51,7 @@ export default createStore({
         listActiveKey: "1",
         transfeListComponent: true,
         labelManagerVisible: false,
+        addCurrentToSite: false,
     },
     /**
      * 改变数据方法的集合

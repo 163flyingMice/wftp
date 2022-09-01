@@ -30,13 +30,19 @@
     >
       <a-row>
         <a-col :span="12">
-          <local-site :state="localSiteState" :refreshRemote="refreshRemote" />
+          <local-site
+            :state="localSiteState"
+            :ref="'localSite' + pane.key"
+            :refreshRemote="refreshRemote"
+          />
         </a-col>
         <a-col :span="12">
           <remote-site
             :state="remoteSiteState"
             :ref="'remoteSite' + pane.key"
             :data="pane"
+            :getLocalPath="getLocalPath"
+            :refreshLocal="refreshLocal"
           />
         </a-col>
       </a-row>
@@ -109,7 +115,6 @@ export default {
         localStorage.getItem("wftp_server") == "null"
       ) {
         invoke("get_default_wftp", {}).then((response) => {
-          console.log(response);
           let res = JSON.parse(response);
           if (res.code == 200) {
             localStorage.setItem("wftp_server", res.list);
@@ -145,6 +150,12 @@ export default {
       this.pass = elem.node.Pass;
       this.protocol = this.protocols[elem.node.Protocol];
       this.loginType = this.loginTypes[elem.node.LogonType];
+    },
+    refreshLocal() {
+      this.$refs["localSite" + this.listActiveKey][0].getData();
+    },
+    getLocalPath() {
+      return this.$refs["localSite" + this.listActiveKey][0].getCurrentPath();
     },
     refreshRemote() {
       if (
