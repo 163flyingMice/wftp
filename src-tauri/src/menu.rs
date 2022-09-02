@@ -115,7 +115,6 @@ pub fn handler(event: WindowMenuEvent) {
                 .emit("erase_personal_information", "清除个人信息")
                 .unwrap();
         }
-        "undo" => {}
         _ => {}
     }
 }

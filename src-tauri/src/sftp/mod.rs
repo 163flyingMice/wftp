@@ -11,7 +11,9 @@ use crate::remote::{FileList, FolderLeaf, FolderTree};
 use crate::result::{
     Error, Success, CONNECTED_SUCCESS_CODE, DISCONNECTED_ERROR_CODE, UNAUTHORIZED_CODE,
 };
+use crate::util::queue::{MyQueue, Queue};
 use crate::util::{get_format_perm, get_format_time, get_snow_id};
+use crate::QUEUE;
 
 pub struct SftpStruct {
     sftp: Option<Sftp>,
@@ -628,6 +630,9 @@ pub fn sftp_dir_download(name: String, root: String, mut path: String) -> String
                                             _ => x,
                                         })
                                         .collect::<String>();
+                                    let mut queue = MyQueue::new();
+                                    queue.enqueue(temp_dir.clone());
+                                    QUEUE.lock().unwrap().insert(name.clone(), queue);
                                     if root == String::from("/") {
                                         if elem.1.is_dir() {
                                             let _ = fs::create_dir_all(temp_dir.clone()).unwrap();
@@ -666,3 +671,5 @@ pub fn sftp_dir_download(name: String, root: String, mut path: String) -> String
     }
     return Error::new(502, "下载文件失败！").out();
 }
+
+pub fn insert_queue() {}

@@ -30,16 +30,25 @@ use crate::sftp::{
 };
 
 lazy_static! {
-    static ref QUEUE: Mutex<HashMap<String, MyQueue<i32>>> = {
-        let map: HashMap<String, MyQueue<i32>> = HashMap::new();
+    static ref QUEUE: Mutex<HashMap<String, MyQueue<String>>> = {
+        let map: HashMap<String, MyQueue<String>> = HashMap::new();
         Mutex::new(map)
     };
 }
 
 fn main() {
     thread::spawn(move || loop {
-        while let Some(v) = QUEUE.lock().unwrap().get_mut("1").unwrap().dequeue() {
-            println!("{v}");
+        match QUEUE.lock() {
+            Ok(mut map) => {
+                for (_, v) in map.iter_mut() {
+                    while let Some(v) = v.dequeue() {
+                        println!("{v}");
+                    }
+                }
+            }
+            Err(err) => {
+                println!("{}", err);
+            }
         }
     });
     tauri::Builder::default()
