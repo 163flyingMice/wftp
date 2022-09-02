@@ -111,7 +111,7 @@ export default {
             fn: () => {
               switch (this.selected.kind) {
                 case "folder":
-                  dir_download(this.selected.name).then((response) => {
+                  dir_download(this.getLocalPath(), this.selected.name).then((response) => {
                     let res = JSON.parse(response);
                     if (res.code == 200) {
                       console.log(response);

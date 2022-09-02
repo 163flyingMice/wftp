@@ -1,6 +1,7 @@
 use base64_stream::base64::decode;
 use ssh2::{FileStat, Session, Sftp};
 use std::collections::HashMap;
+use std::fs::{self, OpenOptions};
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::path::Path;
@@ -603,7 +604,7 @@ pub fn sftp_download(name: String, mut filename: String) -> String {
 }
 
 #[tauri::command]
-pub fn sftp_dir_download(name: String, mut path: String) -> String {
+pub fn sftp_dir_download(name: String, root: String, mut path: String) -> String {
     match SFTP_VEC.lock() {
         Ok(mut s) => {
             if let Some(temp) = s.get_mut(&name) {
@@ -616,7 +617,44 @@ pub fn sftp_dir_download(name: String, mut path: String) -> String {
                         }
                         match sftp.readdir(Path::new(&path)) {
                             Ok(result) => {
-                                println!("{:?}", result);
+                                for elem in result.into_iter() {
+                                    let temp_dir = elem
+                                        .0
+                                        .to_str()
+                                        .unwrap()
+                                        .chars()
+                                        .map(|x| match x {
+                                            '\\' => '/',
+                                            _ => x,
+                                        })
+                                        .collect::<String>();
+                                    if root == String::from("/") {
+                                        if elem.1.is_dir() {
+                                            let _ = fs::create_dir_all(temp_dir.clone()).unwrap();
+                                        }
+                                        if elem.1.is_file() {
+                                            match sftp.open(Path::new(&temp_dir.clone())) {
+                                                Ok(mut file) => {
+                                                    let mut buf: Vec<u8> = Vec::new();
+                                                    match file.read_to_end(&mut buf) {
+                                                        Ok(_) => {
+                                                            let mut file = OpenOptions::new()
+                                                                .write(true)
+                                                                .create(true) // 新建，若文件存在则打开这个文件
+                                                                .open(temp_dir)
+                                                                .unwrap();
+                                                            let _ = file.write_all(&buf).unwrap();
+                                                        }
+                                                        Err(err) => {
+                                                            return Error::new(402, err).out()
+                                                        }
+                                                    }
+                                                }
+                                                Err(err) => return Error::new(402, err).out(),
+                                            };
+                                        }
+                                    }
+                                }
                             }
                             Err(err) => return Error::new(402, err).out(),
                         }

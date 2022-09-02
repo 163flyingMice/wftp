@@ -143,10 +143,11 @@ export async function upload(filename, content) {
     })
 }
 
-export async function dir_download(path) {
+export async function dir_download(root, path) {
     connected = getProtocol();
     return await invoke(funcMap["dir_download"][connected.data.Protocol], {
         name: connected.connectedId,
+        root: root,
         path: path,
     })
 }
