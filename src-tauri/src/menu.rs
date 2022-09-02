@@ -1,5 +1,7 @@
 use tauri::{CustomMenuItem, Menu, Submenu, WindowMenuEvent};
 
+use crate::{util::queue::Queue, QUEUE};
+
 // 应用菜单项
 pub fn init() -> Menu {
     // let _name = &context.package_info().name;
@@ -113,10 +115,7 @@ pub fn handler(event: WindowMenuEvent) {
                 .emit("erase_personal_information", "清除个人信息")
                 .unwrap();
         }
-        "edit_file" => {}
-        "undo" => {
-            dbg!("undo");
-        }
+        "undo" => {}
         _ => {}
     }
 }

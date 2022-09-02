@@ -1,3 +1,4 @@
+pub mod queue;
 use chrono::{TimeZone, Utc};
 use snowflake::ProcessUniqueId;
 

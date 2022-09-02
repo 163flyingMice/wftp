@@ -12,6 +12,8 @@ pub mod remote;
 pub mod result;
 pub mod sftp;
 pub mod util;
+use std::{collections::HashMap, sync::Mutex, thread};
+
 use config::{get_default_wftp, get_wftp_server, wftp_xml_string};
 use local::{get_file_modified, get_file_size};
 use remote::{
@@ -19,6 +21,7 @@ use remote::{
     remove_file, rename_file, size_sort, try_connect, upload,
 };
 use tauri::generate_context;
+use util::queue::{MyQueue, Queue};
 
 use crate::sftp::{
     readdir, sftp_connect, sftp_create, sftp_cwd, sftp_dir_download, sftp_download,
@@ -26,7 +29,19 @@ use crate::sftp::{
     sftp_upload,
 };
 
+lazy_static! {
+    static ref QUEUE: Mutex<HashMap<String, MyQueue<i32>>> = {
+        let map: HashMap<String, MyQueue<i32>> = HashMap::new();
+        Mutex::new(map)
+    };
+}
+
 fn main() {
+    thread::spawn(move || loop {
+        while let Some(v) = QUEUE.lock().unwrap().get_mut("1").unwrap().dequeue() {
+            println!("{v}");
+        }
+    });
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             try_connect,
