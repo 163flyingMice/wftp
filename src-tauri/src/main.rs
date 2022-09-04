@@ -24,7 +24,7 @@ use tauri::generate_context;
 use util::queue::{MyQueue, Queue};
 
 use crate::sftp::{
-    readdir, sftp_connect, sftp_create, sftp_cwd, sftp_dir_download, sftp_download,
+    insert_queue, readdir, sftp_connect, sftp_create, sftp_cwd, sftp_dir_download, sftp_download,
     sftp_folder_list, sftp_mkdir, sftp_prev, sftp_pwd, sftp_rename, sftp_rmdir, sftp_unlink,
     sftp_upload,
 };
@@ -40,11 +40,10 @@ fn main() {
     thread::spawn(move || loop {
         match QUEUE.lock() {
             Ok(mut map) => {
-                for (_, v) in map.iter_mut() {
-                    while let Some(v) = v.dequeue() {
-                        println!("{v}");
-                    }
+                for (k, v) in map.iter() {
+                    insert_queue(k.clone().to_string(), v.clone());
                 }
+                map.clear();
             }
             Err(err) => {
                 println!("{}", err);

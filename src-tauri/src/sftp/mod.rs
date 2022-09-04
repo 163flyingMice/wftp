@@ -18,6 +18,9 @@ use crate::QUEUE;
 pub struct SftpStruct {
     sftp: Option<Sftp>,
     current_path: String,
+    addr: String,
+    user: String,
+    pass: String,
 }
 
 lazy_static! {
@@ -29,7 +32,7 @@ lazy_static! {
 
 #[tauri::command]
 pub fn sftp_connect(addr: String, user: String, pass: String) -> String {
-    match TcpStream::connect(addr) {
+    match TcpStream::connect(addr.clone()) {
         Ok(tcp) => match Session::new() {
             Ok(mut sess) => {
                 sess.set_tcp_stream(tcp);
@@ -40,6 +43,9 @@ pub fn sftp_connect(addr: String, user: String, pass: String) -> String {
                                 let sftp_struct = SftpStruct {
                                     sftp: Some(sftp),
                                     current_path: String::from("/"),
+                                    addr: addr,
+                                    user: user,
+                                    pass: pass,
                                 };
                                 let snow_id = get_snow_id();
                                 match SFTP_VEC.lock() {
@@ -631,11 +637,10 @@ pub fn sftp_dir_download(name: String, root: String, mut path: String) -> String
                                         })
                                         .collect::<String>();
                                     let mut queue = MyQueue::new();
-                                    queue.enqueue(temp_dir.clone());
-                                    QUEUE.lock().unwrap().insert(name.clone(), queue);
                                     if root == String::from("/") {
                                         if elem.1.is_dir() {
-                                            let _ = fs::create_dir_all(temp_dir.clone()).unwrap();
+                                            queue.enqueue(temp_dir.clone());
+                                            //let _ = fs::create_dir_all(temp_dir.clone()).unwrap();
                                         }
                                         if elem.1.is_file() {
                                             match sftp.open(Path::new(&temp_dir.clone())) {
@@ -645,7 +650,7 @@ pub fn sftp_dir_download(name: String, root: String, mut path: String) -> String
                                                         Ok(_) => {
                                                             let mut file = OpenOptions::new()
                                                                 .write(true)
-                                                                .create(true) // 新建，若文件存在则打开这个文件
+                                                                .create(true)
                                                                 .open(temp_dir)
                                                                 .unwrap();
                                                             let _ = file.write_all(&buf).unwrap();
@@ -659,6 +664,7 @@ pub fn sftp_dir_download(name: String, root: String, mut path: String) -> String
                                             };
                                         }
                                     }
+                                    QUEUE.lock().unwrap().insert(name.clone(), queue);
                                 }
                             }
                             Err(err) => return Error::new(402, err).out(),
@@ -672,4 +678,7 @@ pub fn sftp_dir_download(name: String, root: String, mut path: String) -> String
     return Error::new(502, "下载文件失败！").out();
 }
 
-pub fn insert_queue() {}
+pub fn insert_queue(name: String, queue: &MyQueue<String>) {
+    println!("{}", name);
+    println!("{:?}", queue);
+}

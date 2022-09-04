@@ -1,13 +1,16 @@
 use std::collections::VecDeque;
 
+#[derive(Debug)]
 pub struct MyQueue<T> {
     pub vec: VecDeque<T>,
+    pub direction: String,
 }
 
 impl<T> Queue<T> for MyQueue<T> {
     fn new() -> Self {
         MyQueue {
             vec: VecDeque::new(),
+            direction: String::new(),
         }
     }
 
